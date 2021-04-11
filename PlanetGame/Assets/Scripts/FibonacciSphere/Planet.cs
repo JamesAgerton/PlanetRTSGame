@@ -7,7 +7,7 @@ namespace Planets
     public class Planet
     {
         #region Variables (PRIVATE)
-        private FibonacciSphere _FS;
+        public FibonacciSphere _FS;
         
         private List<Vector3> _positions;
         private int[] _raw_triangles;
@@ -49,22 +49,32 @@ namespace Planets
             }
         }
 
-        public void Generate_Planet()
+        /// <summary>
+        /// 0 is success. -1 is failure.
+        /// </summary>
+        /// <returns></returns>
+        public int Generate_Planet()
         {
-            SpherePoints SP = _FS.Generate_Whole_Sphere(_num_tiles - 1, _radius);
+            SpherePoints SP = _FS.Generate_Whole_Sphere(_num_tiles, _radius);
 
             _positions = SP.Positions;
             _raw_triangles = SP.Triangles;
+            Debug.Log(_raw_triangles.Length);
+            if(_raw_triangles.Length < SP.Positions.Count)
+            {
+                return -1;
+            }
 
             //Populate Planet_Tiles
             for(int i = 0; i < _positions.Count; i++)
             {
                 Tiles.Add(new Tile(i, _positions[i]));
             }
-            UnityEngine.Debug.Log("Positions: " + _positions.Count);
+            //UnityEngine.Debug.Log("Positions: " + _positions.Count);
 
             //Create a list of neighbor tiles to add to each Tile on the planet
             Generate_Tile_Neighbor_Lists(_raw_triangles);
+            return 0;
         }
 
         /// <summary>

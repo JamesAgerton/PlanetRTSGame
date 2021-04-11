@@ -43,7 +43,8 @@ namespace Planets
             int[] triangles;
 
             positions = Generate_Fibonacci_Sphere(num_points, radius);
-            triangles = Generate_Fibonacci_Sphere_Trianges(radius, positions);
+            triangles = Generate_Fibonacci_Sphere_Triangles(radius, positions);
+
             Stitch_Bottom(ref triangles, ref positions, radius);
 
             SpherePoints result = new SpherePoints(positions, triangles);
@@ -64,8 +65,9 @@ namespace Planets
             Vector3 position;
             for (int i = 0; i < num_points; i++)
             {
-                latitude = Mathf.Asin(-1f + 2f * (float)i / (num_points + 1));
-                longitude = GOLDEN_RATIO * (float)i;
+                float t = (float)i / (num_points - 1f);
+                latitude = Mathf.Asin(-1f + 2f * t);
+                longitude = 2f * Mathf.PI * GOLDEN_RATIO * (float)i;
 
                 x = Mathf.Cos(longitude) * Mathf.Cos(latitude);
                 y = Mathf.Sin(longitude) * Mathf.Cos(latitude);
@@ -120,15 +122,13 @@ namespace Planets
             return new Vector2(x, y);
         }
 
-        public int[] Generate_Fibonacci_Sphere_Trianges(float radius, List<Vector3> positions)
+        public int[] Generate_Fibonacci_Sphere_Triangles(float radius, List<Vector3> positions)
         {
             List<Vector2> flatPos = new List<Vector2>();
             flatPos = Stereograph_Project_Sphere(radius, positions);
 
             _Delaunay_Triangles = _Delaunay_Calculator.CalculateTriangulation(flatPos);
             int[] triangles = _Delaunay_Triangles.Triangles.ToArray();
-
-            //Stitch the bottom together
 
             return triangles;
         }
@@ -141,29 +141,33 @@ namespace Planets
             positions.Add(sPole);
 
             //Stitch the triangles together properly ... hopefully
-            int[] newTris = new int[tris.Length + 12];
+            int[] newTris = new int[tris.Length + 14];
             //initialize newTris with original triangles
             for(int i = 0; i < tris.Length; i++)
             {
                 newTris[i] = tris[i];
             }
+            /*
+            newTris[tris.Length]        = positions.Count - 2;
+            newTris[tris.Length + 1]    = positions.Count - 4;
+            newTris[tris.Length + 2]    = positions.Count - 1;
             
-            newTris[tris.Length] = positions.Count - 4;
-            newTris[tris.Length + 1] = positions.Count - 3;
-            newTris[tris.Length + 2] = positions.Count - 1;
+            newTris[tris.Length + 3]    = positions.Count - 4;
+            newTris[tris.Length + 4]    = positions.Count - 2;
+            newTris[tris.Length + 5]    = positions.Count - 1;
+            /*
+            newTris[tris.Length + 6]    = positions.Count - 6;
+            newTris[tris.Length + 7]    = positions.Count - 3;
+            newTris[tris.Length + 8]    = positions.Count - 1;
             
-            newTris[tris.Length + 3] = positions.Count - 5;
-            newTris[tris.Length + 4] = positions.Count - 4;
-            newTris[tris.Length + 5] = positions.Count - 1;
-            
-            newTris[tris.Length + 6] = positions.Count - 3;
-            newTris[tris.Length + 7] = positions.Count - 2;
-            newTris[tris.Length + 8] = positions.Count - 1;
-            
-            newTris[tris.Length + 9] = positions.Count - 2;
-            newTris[tris.Length + 10] = positions.Count - 5;
-            newTris[tris.Length + 11] = positions.Count - 1;
+            newTris[tris.Length + 9]    = positions.Count - 3;
+            newTris[tris.Length + 10]   = positions.Count - 5;
+            newTris[tris.Length + 11]   = positions.Count - 1;
 
+            newTris[tris.Length + 12]   = positions.Count - 5;
+            newTris[tris.Length + 13]   = positions.Count - 2;
+            newTris[tris.Length + 14]   = positions.Count - 1;
+            */
             tris = newTris;
         }
         #endregion

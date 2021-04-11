@@ -53,10 +53,20 @@ public class FibonacciTester : MonoBehaviour
         {
             _selection = _num_points - 1;
         }
+
+        if(_num_points < 50)
+        {
+            _num_points = 50;
+        }
+
         if(_current_points != _num_points || _current_radius != _radius)
         {
             _planet = new Planet(_num_points, _radius);
-            _planet.Generate_Planet();
+            if(_planet.Generate_Planet() == -1)
+            {
+                Debug.LogError("Couldn't generate planet", this);
+                return;
+            }
 
             Make_Mesh();
 
@@ -75,11 +85,11 @@ public class FibonacciTester : MonoBehaviour
                 Gizmos.color = Color.white;
                 foreach(Tile tile in _planet.Tiles[_selection].Neighbors)
                 {
-                    Gizmos.DrawWireSphere(transform.TransformPoint(tile.Position), 0.06f);
+                    Gizmos.DrawWireSphere(transform.TransformPoint(tile.Position), 0.05f);
                 }
             }
 
-            Gizmos.DrawSphere(transform.TransformPoint(_planet.Tiles[i].Position), 0.05f);
+            Gizmos.DrawSphere(transform.TransformPoint(_planet.Tiles[i].Position), 0.025f);
         }
     }
     #endregion
@@ -97,14 +107,6 @@ public class FibonacciTester : MonoBehaviour
             _mesh.triangles = _planet.RAW_TRIANGLES;
             _mesh.RecalculateNormals();
 
-            _filter.mesh = _mesh;
-        }
-        else
-        {
-            _mesh = new Mesh();
-            _mesh.name = "No Mesh";
-            _mesh.vertices = new Vector3[0];
-            _mesh.triangles = new int[0];
             _filter.mesh = _mesh;
         }
     }
