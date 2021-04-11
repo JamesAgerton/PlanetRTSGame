@@ -142,28 +142,32 @@ namespace Planets
             positions.Add(sPole);
 
             //Stitch the triangles together properly ... hopefully
-            int[] newTris = new int[tris.Length + 12];
+            int[] newTris = new int[tris.Length + 15];
             //initialize newTris with original triangles
             for(int i = 0; i < tris.Length; i++)
             {
                 newTris[i] = tris[i];
             }
             
-            newTris[tris.Length] = positions.Count - 4;
-            newTris[tris.Length + 1] = positions.Count - 3;
-            newTris[tris.Length + 2] = positions.Count - 1;
+            newTris[tris.Length]        = positions.Count - 4;
+            newTris[tris.Length + 1]    = positions.Count - 2;
+            newTris[tris.Length + 2]    = positions.Count - 1;
             
-            newTris[tris.Length + 3] = positions.Count - 5;
-            newTris[tris.Length + 4] = positions.Count - 4;
-            newTris[tris.Length + 5] = positions.Count - 1;
+            newTris[tris.Length + 3]    = positions.Count - 6;
+            newTris[tris.Length + 4]    = positions.Count - 4;
+            newTris[tris.Length + 5]    = positions.Count - 1;
             
-            newTris[tris.Length + 6] = positions.Count - 3;
-            newTris[tris.Length + 7] = positions.Count - 2;
-            newTris[tris.Length + 8] = positions.Count - 1;
+            newTris[tris.Length + 6]    = positions.Count - 3;
+            newTris[tris.Length + 7]    = positions.Count - 6;
+            newTris[tris.Length + 8]    = positions.Count - 1;
             
-            newTris[tris.Length + 9] = positions.Count - 2;
-            newTris[tris.Length + 10] = positions.Count - 5;
-            newTris[tris.Length + 11] = positions.Count - 1;
+            newTris[tris.Length + 9]    = positions.Count - 5;
+            newTris[tris.Length + 10]   = positions.Count - 3;
+            newTris[tris.Length + 11]   = positions.Count - 1;
+
+            newTris[tris.Length + 12]   = positions.Count - 2;
+            newTris[tris.Length + 13]   = positions.Count - 5;
+            newTris[tris.Length + 14]   = positions.Count - 1;
 
             tris = newTris;
         }

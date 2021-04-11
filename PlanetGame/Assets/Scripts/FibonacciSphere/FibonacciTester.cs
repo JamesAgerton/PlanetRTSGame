@@ -39,7 +39,7 @@ public class FibonacciTester : MonoBehaviour
         _filter = GetComponent<MeshFilter>();
         _renderer = GetComponent<MeshRenderer>();
 
-        _renderer.sharedMaterial = new Material(Shader.Find("SpatialMappingWireframe"));
+        _renderer.sharedMaterial = new Material(Shader.Find("VR/SpatialMappingWireframe"));
 
         Make_Mesh();
     }
@@ -53,6 +53,12 @@ public class FibonacciTester : MonoBehaviour
         {
             _selection = _num_points - 1;
         }
+
+        if(_num_points < 50)
+        {
+            _num_points = 50;
+        }
+
         if(_current_points != _num_points || _current_radius != _radius)
         {
             _planet = new Planet(_num_points, _radius);
