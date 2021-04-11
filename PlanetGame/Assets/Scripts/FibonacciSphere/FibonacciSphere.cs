@@ -64,8 +64,9 @@ namespace Planets
             Vector3 position;
             for (int i = 0; i < num_points; i++)
             {
-                latitude = Mathf.Asin(-1f + 2f * (float)i / (num_points + 1));
-                longitude = GOLDEN_RATIO * (float)i;
+                float t = (float)i / (num_points + 1);
+                latitude = Mathf.Asin(-1f + 2f * t);
+                longitude = 2f * Mathf.PI * GOLDEN_RATIO * (float)i;
 
                 x = Mathf.Cos(longitude) * Mathf.Cos(latitude);
                 y = Mathf.Sin(longitude) * Mathf.Cos(latitude);
