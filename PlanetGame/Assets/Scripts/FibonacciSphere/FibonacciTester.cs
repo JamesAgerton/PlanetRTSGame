@@ -58,6 +58,9 @@ public class FibonacciTester : MonoBehaviour
         if(_num_points < 50)
         {
             _num_points             = 50;
+        }else if(_num_points > 2500)
+        {
+            _num_points = 2500;
         }
 
         if(_current_points != _num_points || _current_radius != _radius)
@@ -97,8 +100,8 @@ public class FibonacciTester : MonoBehaviour
             //Gizmos.DrawWireSphere(intermediate_position, 0.01f);
 
             Vector3 a               = pos - int_pos;
-            Vector3 right           = Vector3.Cross(a, Normal);
-            Vector3 left            = Vector3.Cross(Normal, a);
+            Vector3 right           = Vector3.Cross(a, Normal).normalized;
+            Vector3 left            = Vector3.Cross(Normal, a).normalized;
 
             int_rights.Add(right);
             int_lefts.Add(left);
@@ -116,48 +119,42 @@ public class FibonacciTester : MonoBehaviour
         //the closest intersection should be the corner
         
         List<Vector3> corners       = new List<Vector3>();
-        for(int i = 0; i < int_poss.Count; i++)
+
+        for (int i = 0; i < int_poss.Count; i++)
         {
+            Vector3 A = int_poss[i];
+            Vector3 B = int_poss[i] + (int_rights[i] * 0.5f);
 
-            Vector3 intersection = Vector3.zero;
-            Vector3 linePoint1, lineVec1, linePoint2, lineVec2;
-
-            linePoint1              = int_poss[i];
-            lineVec1                = int_rights[i];
-
-            float minDist           = float.PositiveInfinity;
-            //for every left
-            for(int j = 0; j < int_poss.Count; j++)
+            for (int j = 0; j < int_lefts.Count; j++)
             {
                 if(j != i)
                 {
-                    linePoint2  = int_poss[j];
-                    lineVec2    = int_rights[j];
+                    Vector3 C = int_poss[j] + (int_rights[j] * 0.5f);
+                    Vector3 D = int_poss[j] + (int_lefts[j] * 0.5f);
 
-                    Vector3 curr_intersection;
-                    Vector3 curr_intersection2;
-                    //LineLineIntersection(out curr_intersection, linePoint1, lineVec1, linePoint2, lineVec2);
-                    ClosestPointsOnTwoLines(out curr_intersection, out curr_intersection2, linePoint1, lineVec1, linePoint2, lineVec2);
-                    float curr_dist = Vector3.Distance(curr_intersection, linePoint1);
-                    bool exists     = false;
-                    foreach(Vector3 corner in corners)
+                    Vector3 corner = FindCorner(A, B, C, D);
+                    bool exists = false;
+                    foreach(Vector3 c in corners)
                     {
-                        if(corner == curr_intersection)
+                        if(Vector3.Distance(corner, c) < 0.001f)
                         {
-                            exists  = true;
+                            exists = true;
+                            break;
                         }
                     }
-                    if (curr_dist < minDist && !exists && curr_intersection != Vector3.zero)
+                    if(!exists && corner != Vector3.zero && 
+                        Vector3.Distance(corner, A) > 0.001f && 
+                        Vector3.Distance(corner, C) > 0.0001f &&
+                        Vector3.Distance(corner, B) > 0.0001f && 
+                        Vector3.Distance(corner, D) > 0.0001f)
                     {
-                        minDist     = curr_dist;
-                        intersection = curr_intersection;
+                        corners.Add(corner);
+                        Debug.Log((corners.Count - 1) + " -> " + i + " crosses " + j);
                     }
                 }
             }
-
-            Debug.Log(i + " corner");
-            corners.Add(intersection);
         }
+
         for (int i = 0; i < corners.Count; i++)
         {
             Gizmos.color            = Color.Lerp(Color.blue, Color.red, (float)i / (float)corners.Count);
@@ -284,11 +281,106 @@ public class FibonacciTester : MonoBehaviour
             return false;
         }
     }
-    
-    public static bool AreLineSegmentsCrossing()
+
+    public static int PointOnWhichSideOfLineSegment(Vector3 linePoint1, Vector3 linePoint2, Vector3 point)
     {
-        //TODO: Find closest point between two line segments, then take the midpoint of the resulting line as the corner
-        return false;
+
+        Vector3 lineVec = linePoint2 - linePoint1;
+        Vector3 pointVec = point - linePoint1;
+
+        float dot = Vector3.Dot(pointVec, lineVec);
+
+        //point is on side of linePoint2, compared to linePoint1
+        if (dot > 0)
+        {
+
+            //point is on the line segment
+            if (pointVec.magnitude <= lineVec.magnitude)
+            {
+
+                return 0;
+            }
+
+            //point is not on the line segment and it is on the side of linePoint2
+            else
+            {
+
+                return 2;
+            }
+        }
+
+        //Point is not on side of linePoint2, compared to linePoint1.
+        //Point is not on the line segment and it is on the side of linePoint1.
+        else
+        {
+
+            return 1;
+        }
+    }
+    public static bool AreLineSegmentsCrossing(Vector3 pointA1, Vector3 pointA2, Vector3 pointB1, Vector3 pointB2)
+    {
+        Vector3 closestPointA;
+        Vector3 closestPointB;
+        int sideA;
+        int sideB;
+
+        Vector3 lineVecA = pointA2 - pointA1;
+        Vector3 lineVecB = pointB2 - pointB1;
+
+        bool valid = ClosestPointsOnTwoLines(out closestPointA, out closestPointB, pointA1, pointA2, pointB1, pointB2);
+
+        //lines are not parallel
+        if (valid)
+        {
+            sideA = PointOnWhichSideOfLineSegment(pointA1, pointA2, closestPointA);
+            sideB = PointOnWhichSideOfLineSegment(pointB1, pointB2, closestPointB);
+
+            if ((sideA == 0) && (sideB == 0))
+            {
+
+                return true;
+            }
+
+            else
+            {
+
+                return false;
+            }
+        }
+
+        //lines are parallel
+        else
+        {
+
+            return false;
+        }
+    }
+    public Vector3 constrainToSegment(Vector3 position, Vector3 a, Vector3 b)
+    {
+        Vector3 ba = b - a;
+        float t = Vector3.Dot(position - a, ba) / Vector3.Dot(ba, ba);
+        return Vector3.Lerp(a, b, Mathf.Clamp(t, 0f, 1f));
+    }
+    public Vector3 FindCorner(Vector3 A, Vector3 B, Vector3 C, Vector3 D)
+    {
+        Vector3 BA = B - A;
+        Vector3 DC = D - C;
+
+        // Project endpoints of first segment onto plane defined by second segment as the normal.
+        Vector3 inPlaneA = Vector3.ProjectOnPlane(A, DC);
+        Vector3 inPlaneB = Vector3.ProjectOnPlane(B, DC);
+        Vector3 inPlaneBA = inPlaneB - inPlaneA;
+        float t = Vector3.Dot(C - inPlaneA, inPlaneBA) / Vector3.Dot(inPlaneBA, inPlaneBA);
+        t = (inPlaneA != inPlaneB) ? t : 0f;    //Zero if parallel
+        Vector3 segABtoLineCD = Vector3.Lerp(A, B, Mathf.Clamp(t, 0, 1));
+
+        Vector3 segCDtoSegAB = constrainToSegment(segABtoLineCD, C, D);
+        Vector3 segABtoSegCD = constrainToSegment(segCDtoSegAB, A, B);
+
+        //Debug.DrawLine(A, B);
+        //Debug.DrawLine(C, D);
+
+        return segABtoSegCD;
     }
     #endregion
 }
