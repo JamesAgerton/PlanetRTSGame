@@ -133,24 +133,24 @@ public class FibonacciTester : MonoBehaviour
 
 
         //Find corners
-        //List<Vector3> corners       = new List<Vector3>();
-        
+        List<Vector3> corners       = _planet.Tiles[_selection].Calculate_Corners(Vector3.zero);
+        Debug.Log(corners.Count + " " + corners[0]);
 
-        //for (int i = 0; i < corners.Count; i++)
-        //{
-        //    if(corners.Count != _planet.Tiles[_selection].Neighbors.Count)
-        //    {
-        //        Gizmos.color = Color.red;
-        //    }
-        //    else
-        //    {
-        //        Gizmos.color = Color.Lerp(Color.blue, Color.red, (float)i / (float)corners.Count);
-        //    }
-        //    Handles.color           = Color.green;
-        //    Handles.Label(corners[i], i.ToString());
-        //    Gizmos.DrawSphere(corners[i], 0.01f);
-        //}
-        
+        for (int i = 0; i < corners.Count; i++)
+        {
+            if (corners.Count != _planet.Tiles[_selection].Neighbors.Count)
+            {
+                Gizmos.color = Color.red;
+            }
+            else
+            {
+                Gizmos.color = Color.Lerp(Color.blue, Color.red, (float)i / (float)corners.Count);
+            }
+
+            Handles.Label(corners[i], i.ToString());
+            Gizmos.DrawSphere(corners[i], 0.01f);
+        }
+
         //Draw all points on the sphere
         /*
         for (int i = 0; i < _planet.Tiles.Count; i++)
