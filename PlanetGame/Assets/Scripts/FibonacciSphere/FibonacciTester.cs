@@ -76,92 +76,80 @@ public class FibonacciTester : MonoBehaviour
 
     private void OnDrawGizmos()
     {
-        Gizmos.color                = Color.white;
-        Vector3 pos                 = _planet.Tiles[_selection].Position;
+        Gizmos.color = Color.white;
+        Vector3 pos = _planet.Tiles[_selection].Position;
 
         Gizmos.DrawSphere(transform.TransformPoint(pos), 0.01f);
 
-        Vector3 Normal              = _planet.Tiles[_selection].Position - this.transform.position;
+        Vector3 Normal = (_planet.Tiles[_selection].Position - this.transform.position).normalized;
         Gizmos.DrawLine(pos, pos + transform.TransformPoint(Normal));
 
-        //Find right and left direction from intermediate positions
-        List<Vector3> int_poss      = new List<Vector3>();
+        //Find right and left direction from intermediate positions?
+        List<Vector3> int_poss = _planet.Tiles[_selection].Extents;
         List<Vector3> int_rights    = new List<Vector3>();
         List<Vector3> int_lefts     = new List<Vector3>();
-        for(int i = 0; i < _planet.Tiles[_selection].Neighbors.Count; i++)
+
+        //Find right and left directions
+        for (int i = 0; i < int_poss.Count; i++)
         {
-            Vector3 N               = _planet.Tiles[_selection].Neighbors[i].Position;
-            Vector3 int_pos         = pos + transform.TransformPoint(Vector3.ProjectOnPlane(Vector3.Lerp(pos, N, 0.49f), Normal));
-            
-            int_poss.Add(int_pos);
-
-            Gizmos.color            = Color.white;
-            Gizmos.DrawWireSphere(N, 0.015f);
-            //Gizmos.DrawWireSphere(intermediate_position, 0.01f);
-
-            Vector3 a               = pos - int_pos;
-            Vector3 right           = Vector3.Cross(a, Normal).normalized;
-            Vector3 left            = Vector3.Cross(Normal, a).normalized;
+            Vector3 a = pos - int_poss[i];
+            Vector3 right = Vector3.Cross(a, Normal).normalized;
+            Vector3 left = Vector3.Cross(Normal, a).normalized;
 
             int_rights.Add(right);
             int_lefts.Add(left);
-
-            Gizmos.color            = Color.magenta;
-            Gizmos.DrawLine(int_pos, int_pos + right * 0.5f);
-            Gizmos.color            = Color.green;
-            Gizmos.DrawLine(int_pos, int_pos + left * 0.5f);
-            Handles.color = Color.white;
-            Handles.Label(int_pos, i.ToString());
         }
 
-        //Find corners
-        //all int_rights should intersect an int_left
-        //the closest intersection should be the corner
-        
-        List<Vector3> corners       = new List<Vector3>();
+        float max_int_dist = 0f;
+        float min_int_dist = float.PositiveInfinity;
+        float mid_int_dist = 0f;
+        foreach (Vector3 a in int_poss)
+        {
+            float f = Vector3.Distance(a, pos);
+            if (f > max_int_dist)
+            {
+                max_int_dist = f;
+            }
+            else if(f < min_int_dist)
+            {
+                min_int_dist = f;
+            }
+        }
+        mid_int_dist = ((max_int_dist - min_int_dist) / 2f) + min_int_dist;
+
+        float used_dist = mid_int_dist;
 
         for (int i = 0; i < int_poss.Count; i++)
         {
-            Vector3 A = int_poss[i];
-            Vector3 B = int_poss[i] + (int_rights[i] * 0.5f);
-
-            for (int j = 0; j < int_lefts.Count; j++)
-            {
-                if(j != i)
-                {
-                    Vector3 C = int_poss[j] + (int_rights[j] * 0.5f);
-                    Vector3 D = int_poss[j] + (int_lefts[j] * 0.5f);
-
-                    Vector3 corner = FindCorner(A, B, C, D);
-                    bool exists = false;
-                    foreach(Vector3 c in corners)
-                    {
-                        if(Vector3.Distance(corner, c) < 0.001f)
-                        {
-                            exists = true;
-                            break;
-                        }
-                    }
-                    if(!exists && corner != Vector3.zero && 
-                        Vector3.Distance(corner, A) > 0.001f && 
-                        Vector3.Distance(corner, C) > 0.0001f &&
-                        Vector3.Distance(corner, B) > 0.0001f && 
-                        Vector3.Distance(corner, D) > 0.0001f)
-                    {
-                        corners.Add(corner);
-                        Debug.Log((corners.Count - 1) + " -> " + i + " crosses " + j);
-                    }
-                }
-            }
+            Gizmos.color = Color.magenta;
+            Gizmos.DrawLine(int_poss[i], int_poss[i] + int_rights[i] * used_dist);
+            Gizmos.color = Color.green;
+            Gizmos.DrawLine(int_poss[i], int_poss[i] + int_lefts[i] * used_dist);
+            Gizmos.color = Color.white;
+            Gizmos.DrawSphere(int_poss[i], 0.01f);
+            Handles.Label(int_poss[i], i.ToString());
         }
 
-        for (int i = 0; i < corners.Count; i++)
-        {
-            Gizmos.color            = Color.Lerp(Color.blue, Color.red, (float)i / (float)corners.Count);
-            Handles.color           = Color.green;
-            Handles.Label(corners[i], i.ToString());
-            Gizmos.DrawWireSphere(corners[i], 0.01f);
-        }
+
+
+        //Find corners
+        //List<Vector3> corners       = new List<Vector3>();
+        
+
+        //for (int i = 0; i < corners.Count; i++)
+        //{
+        //    if(corners.Count != _planet.Tiles[_selection].Neighbors.Count)
+        //    {
+        //        Gizmos.color = Color.red;
+        //    }
+        //    else
+        //    {
+        //        Gizmos.color = Color.Lerp(Color.blue, Color.red, (float)i / (float)corners.Count);
+        //    }
+        //    Handles.color           = Color.green;
+        //    Handles.Label(corners[i], i.ToString());
+        //    Gizmos.DrawSphere(corners[i], 0.01f);
+        //}
         
         //Draw all points on the sphere
         /*

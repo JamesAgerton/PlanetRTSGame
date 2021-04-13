@@ -67,6 +67,11 @@ namespace Planets
 
             //Create a list of neighbor tiles to add to each Tile on the planet
             Generate_Tile_Neighbor_Lists(_default_triangles);
+            //Give each tile their Extents
+            foreach(Tile tile in Tiles)
+            {
+                tile.Set_Extents(Vector3.zero, 0.49f);
+            }
         }
 
         /// <summary>
