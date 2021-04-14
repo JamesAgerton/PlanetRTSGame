@@ -88,10 +88,10 @@ namespace Planets
         /// <param name="Planet_Pos"></param>
         /// <param name="Ext_Frac"></param>
         /// <returns></returns>
-        public List<Vector3> Set_Extents(Vector3 Planet_Pos, float Ext_Frac)
+        public List<Vector3> Set_Extents(float Ext_Frac)
         {
             Vector3 pos             = _position;
-            Vector3 Normal          = (_position - Planet_Pos).normalized;
+            Vector3 Normal          = (_position - Vector3.zero).normalized;
             List<Vector3> ext_poss  = new List<Vector3>();
             _extents                = new List<Vector3>();
 
@@ -133,9 +133,9 @@ namespace Planets
 
                             if(f < minAngle)
                             {
-                                minAngle    = f;
-                                C           = ext_poss[j];
-                                current_point     = j;
+                                minAngle        = f;
+                                C               = ext_poss[j];
+                                current_point   = j;
                             }
                         }
                     }
@@ -158,45 +158,78 @@ namespace Planets
         }
 
         /// <summary>
-        /// Closer, but I think I need to add some sort of walking algorithm to get the corners closer
+        /// Uses magical trigonometry to find the corners between each _extent point.
         /// </summary>
-        /// <param name="Planet_Pos"></param>
         /// <returns></returns>
-        public List<Vector3> Calculate_Corners(Vector3 Planet_Pos)
+        public List<Vector3> Calculate_Corners()
         {
-            List<Vector3> corners   = new List<Vector3>();
-            Vector3 Normal          = (_position - Planet_Pos).normalized;
+            //       /q\       // This is a trig problem, easy to solve.
+            //    C /   \ A    // Known: x, Q, b, B, d, D | Desired: a, A, c, C, q
+            //     /a_Q_c\     // Law of Sines: A/Sin(a) = C/Sin(c) = Q/Sin(q)
+            // j   \b   d/  i  //
+            //    D \   / B    // A = Q * (Sin(a) / Sin(q)) | C = Q * (Sin(c) / Sin(q))
+            //       \x/       // What I really want is the point at q, I can get it with the length of A or C.
+
+            List<Vector3> corners       = new List<Vector3>();
+            Vector3 Normal              = (_position - Vector3.zero).normalized;
 
             for (int i = 0; i < _extents.Count; i++)
             {
-                float Angle = 0f;
-                Vector3 to_extent = (_position - _extents[i]);
-                if (i < _extents.Count - 1)
-                {
-                    Angle = Vector3.Angle(to_extent, _position - _extents[i + 1]) / 2f;
-                }
-                else
-                {
-                    Angle = Vector3.Angle(to_extent, _position - _extents[0]) / 2f;
-                }
+                //Grab knowns
+                int j                   = (i < _extents.Count - 1) ? i + 1 : 0;
+                Vector3 B               = (_position - _extents[j]);
+                Vector3 D               = (_position - _extents[i]);
+                Vector3 Q               = (_extents[i] - _extents[j]);
+                //float x                 = (Vector3.Angle(B, D)) * Mathf.Deg2Rad;
+                float d                 = (Vector3.Angle(_extents[i] - _extents[j], B));
+                float b                 = (Vector3.Angle(_extents[j] - _extents[i], D));
 
-                Vector3 point = Vector3.zero;
-                if(Angle > 0f)
-                {
-                    float dist = to_extent.magnitude * Mathf.Asin(Angle * (Mathf.PI / 180f));
-                    Vector3 Perp = Vector3.Cross(Normal, to_extent).normalized;
-                    point = _extents[i] + (Perp * dist);
+                //Find a and c and q
+                float a                 = (90f - b);
+                float c                 = (90f - d);
+                float q                 = (180f - a - c) * Mathf.Deg2Rad;
 
-                    corners.Add(point);
-                    Debug.Log(i + " " + Angle);
-                }
-                else
-                {
-                    Debug.LogError("Failed to find Corner");
-                }
+
+                //Debug.Log("\na:" + a + " | c:" + c + " | q:" + q + " || b:" + b + " | d:" + d); 
+
+                //Find A
+                float C = Q.magnitude * (Mathf.Sin(c * Mathf.Deg2Rad) / Mathf.Sin(q));
+
+                Vector3 left_extent     = Vector3.Cross(_extents[i], Normal).normalized;
+
+                Vector3 corner          = _extents[i] + (left_extent * C);
+                corners.Add(corner);
             }
 
             return corners;
+        }
+
+        public void Generate_Tile_Triangles_and_Vertices(ref List<int> Triangles, ref List<Vector3> Vertices, float extent_frac)
+        {
+            float fraction = (extent_frac < 0.5f) ? extent_frac : 0.4999f;
+            int count = 0;
+            List<Vector3> extents = Set_Extents(fraction);
+            List<Vector3> corners = Calculate_Corners();
+
+            int start = Vertices.Count;
+
+            Vertices.Add(_position);
+            for (int i = 0; i < corners.Count; i++)
+            {
+                Vertices.Add(corners[i]);
+            }
+            //Debug.Log(corners.Count + " " + extents.Count);
+            for(int i = 0; i < corners.Count; i++)
+            {
+                count++;
+                int j = (i < corners.Count - 1) ? (i + 1) : 0;
+
+                Triangles.Add(start);
+                Triangles.Add(start + j + 1);
+                Triangles.Add(start + i + 1);
+
+                Debug.Log("Triangle: " + count + " " + start + "," + (start + j) + "," + (start + i));
+            }
         }
 
         //Equals is used in IEquatable interface: Lets a comparison to check if two Tiles are equivalent

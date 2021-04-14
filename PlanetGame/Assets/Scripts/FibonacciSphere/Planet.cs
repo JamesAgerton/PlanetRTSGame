@@ -1,6 +1,5 @@
 ﻿using System.Collections.Generic;
 using UnityEngine;
-using GK;
 
 namespace Planets
 {
@@ -26,13 +25,17 @@ namespace Planets
         public int[]            Default_Triangles   => _default_triangles;
         public List<Vector3>    Tile_Verts          => _tile_vertices;
         public List<int>        Tile_Triangles      => _tile_triangles;
-        public Mesh             Tiles_Mesh          => _tiled_mesh;
+        public Mesh             Tiled_Mesh          => _tiled_mesh;
         #endregion
 
         public Planet(int num_tiles, float radius)
         {
             _FS = new FibonacciSphere();
             Tiles = new List<Tile>();
+            _tile_positions = new List<Vector3>();
+            _tile_vertices = new List<Vector3>();
+            _tile_triangles = new List<int>();
+
             if(radius > 0)
             {
                 _radius     = radius;
@@ -51,7 +54,7 @@ namespace Planets
             }
         }
 
-        public void Generate_Planet()
+        public void Generate_Planet(float Tile_Seperation)
         {
             SpherePoints    SP     = _FS.Generate_Whole_Sphere(_num_tiles - 1, _radius);
 
@@ -68,10 +71,18 @@ namespace Planets
             //Create a list of neighbor tiles to add to each Tile on the planet
             Generate_Tile_Neighbor_Lists(_default_triangles);
             //Give each tile their Extents
+            float fraction = 0.5f - (Tile_Seperation / 2f);
             foreach(Tile tile in Tiles)
             {
-                tile.Set_Extents(Vector3.zero, 0.49f);
+                tile.Generate_Tile_Triangles_and_Vertices(ref _tile_triangles, ref _tile_vertices, fraction);
             }
+
+
+            _tiled_mesh = new Mesh();
+            _tiled_mesh.name = "Tiled Mesh";
+            _tiled_mesh.vertices = _tile_vertices.ToArray();
+            _tiled_mesh.triangles = _tile_triangles.ToArray();
+            _tiled_mesh.RecalculateNormals();
         }
 
         /// <summary>

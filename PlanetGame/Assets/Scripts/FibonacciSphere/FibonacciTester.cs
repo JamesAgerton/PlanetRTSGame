@@ -10,6 +10,8 @@ public class FibonacciTester : MonoBehaviour
     #region Variables (PRIVATE)
     [SerializeField]
     int         _num_points         = 100;
+    [SerializeField, Range(0f, 0.2f)]
+    float       _tile_seperation    = 0.02f;
     [SerializeField]
     float       _radius             = 1f;
     [SerializeField]
@@ -19,6 +21,7 @@ public class FibonacciTester : MonoBehaviour
 
     float       _current_radius     = 1f;
     float       _current_points     = 100;
+    float       _current_seperation = 0.02f;
 
     Planet          _planet;
     Mesh            _mesh;
@@ -35,7 +38,7 @@ public class FibonacciTester : MonoBehaviour
     private void Start()
     {
         _planet                     = new Planet(_num_points, _radius);
-        _planet.Generate_Planet();
+        _planet.Generate_Planet(_tile_seperation);
         _filter                     = GetComponent<MeshFilter>();
         _renderer                   = GetComponent<MeshRenderer>();
 
@@ -58,18 +61,20 @@ public class FibonacciTester : MonoBehaviour
         if(_num_points < 50)
         {
             _num_points             = 50;
-        }else if(_num_points > 2500)
+        }
+        else if(_num_points > 2500)
         {
-            _num_points = 2500;
+            _num_points             = 2500;
         }
 
-        if(_current_points != _num_points || _current_radius != _radius)
+        if(_current_points != _num_points || _current_radius != _radius || _current_seperation != _tile_seperation)
         {
             _planet                 = new Planet(_num_points, _radius);
             _current_radius         = _radius;
             _current_points         = _num_points;
+            _current_seperation     = _tile_seperation;
 
-            _planet.Generate_Planet();
+            _planet.Generate_Planet(_tile_seperation);
             Make_Mesh();
         }
     }
@@ -85,7 +90,7 @@ public class FibonacciTester : MonoBehaviour
         Gizmos.DrawLine(pos, pos + transform.TransformPoint(Normal));
 
         //Find right and left direction from intermediate positions?
-        List<Vector3> int_poss = _planet.Tiles[_selection].Extents;
+        List<Vector3> int_poss      = _planet.Tiles[_selection].Extents;
         List<Vector3> int_rights    = new List<Vector3>();
         List<Vector3> int_lefts     = new List<Vector3>();
 
@@ -102,7 +107,6 @@ public class FibonacciTester : MonoBehaviour
 
         float max_int_dist = 0f;
         float min_int_dist = float.PositiveInfinity;
-        float mid_int_dist = 0f;
         foreach (Vector3 a in int_poss)
         {
             float f = Vector3.Distance(a, pos);
@@ -115,7 +119,7 @@ public class FibonacciTester : MonoBehaviour
                 min_int_dist = f;
             }
         }
-        mid_int_dist = ((max_int_dist - min_int_dist) / 2f) + min_int_dist;
+        float mid_int_dist = ((max_int_dist - min_int_dist) / 2f) + min_int_dist;
 
         float used_dist = mid_int_dist;
 
@@ -130,11 +134,9 @@ public class FibonacciTester : MonoBehaviour
             Handles.Label(int_poss[i], i.ToString());
         }
 
-
-
         //Find corners
-        List<Vector3> corners       = _planet.Tiles[_selection].Calculate_Corners(Vector3.zero);
-        Debug.Log(corners.Count + " " + corners[0]);
+        List<Vector3> corners       = _planet.Tiles[_selection].Calculate_Corners();
+        Debug.Log(corners.Count + " " + int_poss.Count);
 
         for (int i = 0; i < corners.Count; i++)
         {
@@ -176,13 +178,7 @@ public class FibonacciTester : MonoBehaviour
     {
         if (_raw_mesh)
         {
-            _mesh = new Mesh();
-            _mesh.name = "mesh";
-
-            Vector3[] verts = _planet.Tile_Positions.ToArray();
-            _mesh.vertices = verts;
-            _mesh.triangles = _planet.Default_Triangles;
-            _mesh.RecalculateNormals();
+            _mesh = _planet.Tiled_Mesh;
 
             _filter.mesh = _mesh;
         }
@@ -194,181 +190,6 @@ public class FibonacciTester : MonoBehaviour
             _mesh.triangles = new int[0];
             _filter.mesh = _mesh;
         }
-    }
-
-    void Make_Planet_Tile_Mesh()
-    {
-        if (_planet.Tiles_Mesh)
-        {
-            _mesh = _planet.Tiles_Mesh;
-            _mesh.name = "Tile Mesh";
-
-            _mesh.vertices = _planet.Tile_Verts.ToArray();
-            _mesh.triangles = _planet.Tile_Triangles.ToArray();
-            _mesh.RecalculateNormals();
-
-            _filter.mesh = _mesh;
-        }
-    }
-
-    public static bool LineLineIntersection(out Vector3 intersection, Vector3 linePoint1, Vector3 lineVec1, Vector3 linePoint2, Vector3 lineVec2)
-    {
-        Vector3 lineVec3 = linePoint2 - linePoint1;
-        Vector3 crossVec1and2 = Vector3.Cross(lineVec1, lineVec2);
-        Vector3 crossVec3and2 = Vector3.Cross(lineVec3, lineVec2);
-
-        float planarFactor = Vector3.Dot(lineVec3, crossVec1and2);
-
-        //is coplanar and not parrallel
-        if (Mathf.Abs(planarFactor) < 0.0001f && crossVec1and2.sqrMagnitude > 0.0001f)
-        {
-            float s = Vector3.Dot(crossVec3and2, crossVec1and2) / crossVec1and2.sqrMagnitude;
-            intersection = linePoint1 + (lineVec1 * s);
-            return true;
-        }
-        else
-        {
-            Debug.Log("Not coplanar");
-            intersection = Vector3.zero;
-            return false;
-        }
-    }
-
-    public static bool ClosestPointsOnTwoLines(out Vector3 closestPointLine1, out Vector3 closestPointLine2, Vector3 linePoint1, Vector3 lineVec1, Vector3 linePoint2, Vector3 lineVec2)
-    {
-
-        closestPointLine1 = Vector3.zero;
-        closestPointLine2 = Vector3.zero;
-
-        float a = Vector3.Dot(lineVec1, lineVec1);
-        float b = Vector3.Dot(lineVec1, lineVec2);
-        float e = Vector3.Dot(lineVec2, lineVec2);
-
-        float d = a * e - b * b;
-
-        //lines are not parallel
-        if (d != 0.0f)
-        {
-
-            Vector3 r = linePoint1 - linePoint2;
-            float c = Vector3.Dot(lineVec1, r);
-            float f = Vector3.Dot(lineVec2, r);
-
-            float s = (b * f - c * e) / d;
-            float t = (a * f - c * b) / d;
-
-            closestPointLine1 = linePoint1 + lineVec1 * s;
-            closestPointLine2 = linePoint2 + lineVec2 * t;
-
-            return true;
-        }
-
-        else
-        {
-            Debug.Log("not parallel");
-            return false;
-        }
-    }
-
-    public static int PointOnWhichSideOfLineSegment(Vector3 linePoint1, Vector3 linePoint2, Vector3 point)
-    {
-
-        Vector3 lineVec = linePoint2 - linePoint1;
-        Vector3 pointVec = point - linePoint1;
-
-        float dot = Vector3.Dot(pointVec, lineVec);
-
-        //point is on side of linePoint2, compared to linePoint1
-        if (dot > 0)
-        {
-
-            //point is on the line segment
-            if (pointVec.magnitude <= lineVec.magnitude)
-            {
-
-                return 0;
-            }
-
-            //point is not on the line segment and it is on the side of linePoint2
-            else
-            {
-
-                return 2;
-            }
-        }
-
-        //Point is not on side of linePoint2, compared to linePoint1.
-        //Point is not on the line segment and it is on the side of linePoint1.
-        else
-        {
-
-            return 1;
-        }
-    }
-    public static bool AreLineSegmentsCrossing(Vector3 pointA1, Vector3 pointA2, Vector3 pointB1, Vector3 pointB2)
-    {
-        Vector3 closestPointA;
-        Vector3 closestPointB;
-        int sideA;
-        int sideB;
-
-        Vector3 lineVecA = pointA2 - pointA1;
-        Vector3 lineVecB = pointB2 - pointB1;
-
-        bool valid = ClosestPointsOnTwoLines(out closestPointA, out closestPointB, pointA1, pointA2, pointB1, pointB2);
-
-        //lines are not parallel
-        if (valid)
-        {
-            sideA = PointOnWhichSideOfLineSegment(pointA1, pointA2, closestPointA);
-            sideB = PointOnWhichSideOfLineSegment(pointB1, pointB2, closestPointB);
-
-            if ((sideA == 0) && (sideB == 0))
-            {
-
-                return true;
-            }
-
-            else
-            {
-
-                return false;
-            }
-        }
-
-        //lines are parallel
-        else
-        {
-
-            return false;
-        }
-    }
-    public Vector3 constrainToSegment(Vector3 position, Vector3 a, Vector3 b)
-    {
-        Vector3 ba = b - a;
-        float t = Vector3.Dot(position - a, ba) / Vector3.Dot(ba, ba);
-        return Vector3.Lerp(a, b, Mathf.Clamp(t, 0f, 1f));
-    }
-    public Vector3 FindCorner(Vector3 A, Vector3 B, Vector3 C, Vector3 D)
-    {
-        Vector3 BA = B - A;
-        Vector3 DC = D - C;
-
-        // Project endpoints of first segment onto plane defined by second segment as the normal.
-        Vector3 inPlaneA = Vector3.ProjectOnPlane(A, DC);
-        Vector3 inPlaneB = Vector3.ProjectOnPlane(B, DC);
-        Vector3 inPlaneBA = inPlaneB - inPlaneA;
-        float t = Vector3.Dot(C - inPlaneA, inPlaneBA) / Vector3.Dot(inPlaneBA, inPlaneBA);
-        t = (inPlaneA != inPlaneB) ? t : 0f;    //Zero if parallel
-        Vector3 segABtoLineCD = Vector3.Lerp(A, B, Mathf.Clamp(t, 0, 1));
-
-        Vector3 segCDtoSegAB = constrainToSegment(segABtoLineCD, C, D);
-        Vector3 segABtoSegCD = constrainToSegment(segCDtoSegAB, A, B);
-
-        //Debug.DrawLine(A, B);
-        //Debug.DrawLine(C, D);
-
-        return segABtoSegCD;
     }
     #endregion
 }
