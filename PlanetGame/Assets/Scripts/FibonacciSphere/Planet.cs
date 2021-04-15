@@ -36,7 +36,7 @@ namespace Planets
             _tile_vertices = new List<Vector3>();
             _tile_triangles = new List<int>();
 
-            if(radius > 0)
+            if(radius >= 1f)
             {
                 _radius     = radius;
             }
@@ -44,7 +44,8 @@ namespace Planets
             {
                 _radius     = 1f;
             }
-            if(num_tiles > 50)
+
+            if(num_tiles >= 50)
             {
                 _num_tiles  = num_tiles;
             }
@@ -76,7 +77,6 @@ namespace Planets
             {
                 tile.Generate_Tile_Triangles_and_Vertices(ref _tile_triangles, ref _tile_vertices, fraction);
             }
-
 
             _tiled_mesh = new Mesh();
             _tiled_mesh.name = "Tiled Mesh";
@@ -133,31 +133,11 @@ namespace Planets
                         New_Neighbors.RemoveAt(i);
                     }
                 }
-                New_Neighbors.Sort();
                 tile.Set_Neighbors(New_Neighbors);
+                tile.Sort_Neighbors();
             }
 
             return 0;
-        }
-
-        public void Generate_Tile_Mesh(int index, float fraction)
-        {
-            if(fraction > 0.5f)
-            {
-                fraction    = 0.5f;
-            }
-
-            //Get a point halfway between this tile and its neighbors
-            List<Vector3>   intermediate_positions      = new List<Vector3>();
-            foreach(Tile tile in Tiles[index].Neighbors)
-            {
-                Vector3     int_pos     = Vector3.Lerp(_tile_positions[index], tile.Position, fraction);
-                intermediate_positions.Add(int_pos);
-            }
-
-            //Grab the point of intersection 90 degrees to right and left of each neighbor
-
-            //Draw Triangles to each of those points
         }
     }
 }

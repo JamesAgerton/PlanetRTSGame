@@ -6,18 +6,21 @@ using Planets;
 [ExecuteInEditMode]
 [RequireComponent(typeof(MeshRenderer), typeof(MeshFilter))]
 public class FibonacciTester : MonoBehaviour
-{
+{    
+    enum _mesh_type { RAW, TILED };
+
     #region Variables (PRIVATE)
-    [SerializeField]
-    int         _num_points         = 100;
+    [SerializeField, Range(50, 1474)]   //  1474 is the number just before the north pole generation creates overlapping tiles
+                                        //      at 1083 fewer edge issues occur.
+    int _num_points = 100;
     [SerializeField, Range(0f, 0.2f)]
-    float       _tile_seperation    = 0.02f;
+    float _tile_seperation = 0.02f;
     [SerializeField]
-    float       _radius             = 1f;
+    float _radius = 1f;
     [SerializeField]
-    int         _selection          = 25;
+    int _selection = 25;
     [SerializeField]
-    bool        _raw_mesh           = true;
+    _mesh_type _mesh_type_shown = _mesh_type.RAW;
 
     float       _current_radius     = 1f;
     float       _current_points     = 100;
@@ -49,23 +52,16 @@ public class FibonacciTester : MonoBehaviour
 
     private void Update()
     {
-        if(_selection < 0)
+        if(_selection <= 0)
         {
             _selection              = 0;
         }
-        else if(_selection > _num_points)
+        else if(_selection >= _num_points)
         {
             _selection              = _num_points - 1;
         }
 
-        if(_num_points < 50)
-        {
-            _num_points             = 50;
-        }
-        else if(_num_points > 2500)
-        {
-            _num_points             = 2500;
-        }
+        Mathf.Clamp(_num_points, 50, 2500);
 
         if(_current_points != _num_points || _current_radius != _radius || _current_seperation != _tile_seperation)
         {
@@ -82,75 +78,35 @@ public class FibonacciTester : MonoBehaviour
     private void OnDrawGizmos()
     {
         Gizmos.color = Color.white;
-        Vector3 pos = _planet.Tiles[_selection].Position;
+        Vector3 pos = transform.TransformPoint(_planet.Tiles[_selection].Position);
 
-        Gizmos.DrawSphere(transform.TransformPoint(pos), 0.01f);
+        Gizmos.DrawSphere(pos, 0.02f);
 
-        Vector3 Normal = (_planet.Tiles[_selection].Position - this.transform.position).normalized;
-        Gizmos.DrawLine(pos, pos + transform.TransformPoint(Normal));
+        Vector3 Normal = (pos - this.transform.position).normalized;
+        Gizmos.DrawLine(pos, pos + Normal);
 
-        //Find right and left direction from intermediate positions?
-        List<Vector3> int_poss      = _planet.Tiles[_selection].Extents;
-        List<Vector3> int_rights    = new List<Vector3>();
-        List<Vector3> int_lefts     = new List<Vector3>();
-
-        //Find right and left directions
-        for (int i = 0; i < int_poss.Count; i++)
+        for (int i = 0; i < _planet.Tiles[_selection].Neighbors.Count; i++)
         {
-            Vector3 a = pos - int_poss[i];
-            Vector3 right = Vector3.Cross(a, Normal).normalized;
-            Vector3 left = Vector3.Cross(Normal, a).normalized;
+            Gizmos.DrawSphere(transform.TransformPoint(_planet.Tiles[_selection].Neighbors[i].Position), 0.025f);
+            Gizmos.DrawSphere(transform.TransformPoint(_planet.Tiles[_selection].Extents[i]), 0.001f);
 
-            int_rights.Add(right);
-            int_lefts.Add(left);
-        }
-
-        float max_int_dist = 0f;
-        float min_int_dist = float.PositiveInfinity;
-        foreach (Vector3 a in int_poss)
-        {
-            float f = Vector3.Distance(a, pos);
-            if (f > max_int_dist)
-            {
-                max_int_dist = f;
-            }
-            else if(f < min_int_dist)
-            {
-                min_int_dist = f;
-            }
-        }
-        float mid_int_dist = ((max_int_dist - min_int_dist) / 2f) + min_int_dist;
-
-        float used_dist = mid_int_dist;
-
-        for (int i = 0; i < int_poss.Count; i++)
-        {
+            //Find right and left
+            float length = _radius * 0.1f;
             Gizmos.color = Color.magenta;
-            Gizmos.DrawLine(int_poss[i], int_poss[i] + int_rights[i] * used_dist);
+            Vector3 right = Vector3.Cross(pos - _planet.Tiles[_selection].Extents[i], Normal).normalized * length;
+            Gizmos.DrawLine(transform.TransformPoint(_planet.Tiles[_selection].Extents[i]), transform.TransformPoint(_planet.Tiles[_selection].Extents[i]) + right);
             Gizmos.color = Color.green;
-            Gizmos.DrawLine(int_poss[i], int_poss[i] + int_lefts[i] * used_dist);
-            Gizmos.color = Color.white;
-            Gizmos.DrawSphere(int_poss[i], 0.01f);
-            Handles.Label(int_poss[i], i.ToString());
-        }
+            Vector3 left = Vector3.Cross(Normal, pos - _planet.Tiles[_selection].Extents[i]).normalized * length;
+            Gizmos.DrawLine(transform.TransformPoint(_planet.Tiles[_selection].Extents[i]), transform.TransformPoint(_planet.Tiles[_selection].Extents[i]) + left);
 
-        //Find corners
-        List<Vector3> corners       = _planet.Tiles[_selection].Calculate_Corners();
-        Debug.Log(corners.Count + " " + int_poss.Count);
-
-        for (int i = 0; i < corners.Count; i++)
-        {
-            if (corners.Count != _planet.Tiles[_selection].Neighbors.Count)
+            for (int j = 0; j < _planet.Tiles[_selection].Corners.Count; j++)
             {
-                Gizmos.color = Color.red;
+                Gizmos.color = Color.Lerp(Color.blue, Color.white, (float)j / (float)_planet.Tiles[_selection].Corners.Count);
+                Gizmos.DrawWireSphere(_planet.Tiles[_selection].Corners[j], 0.025f);
+                Handles.Label(_planet.Tiles[_selection].Corners[j], j.ToString());
             }
-            else
-            {
-                Gizmos.color = Color.Lerp(Color.blue, Color.red, (float)i / (float)corners.Count);
-            }
-
-            Handles.Label(corners[i], i.ToString());
-            Gizmos.DrawSphere(corners[i], 0.01f);
+            Handles.Label(transform.TransformPoint(_planet.Tiles[_selection].Extents[i]), i.ToString());
+            Handles.Label(transform.TransformPoint(_planet.Tiles[_selection].Neighbors[i].Position), i.ToString());
         }
 
         //Draw all points on the sphere
@@ -176,19 +132,19 @@ public class FibonacciTester : MonoBehaviour
     #region Methods
     void Make_Mesh()
     {
-        if (_raw_mesh)
+        switch (_mesh_type_shown)
         {
-            _mesh = _planet.Tiled_Mesh;
-
-            _filter.mesh = _mesh;
-        }
-        else
-        {
-            _mesh = new Mesh();
-            _mesh.name = "No Mesh";
-            _mesh.vertices = new Vector3[0];
-            _mesh.triangles = new int[0];
-            _filter.mesh = _mesh;
+            case (_mesh_type.TILED):
+                _mesh = _planet.Tiled_Mesh;
+                _filter.mesh = _mesh;
+                break;
+            case (_mesh_type.RAW):
+                _mesh = new Mesh();
+                _mesh.name = "Raw Mesh";
+                _mesh.vertices = _planet.Tile_Positions.ToArray();
+                _mesh.triangles = _planet.Default_Triangles;
+                _mesh.RecalculateNormals();
+                break;
         }
     }
     #endregion

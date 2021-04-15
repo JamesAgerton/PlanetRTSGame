@@ -11,6 +11,7 @@ namespace Planets
         private Vector3         _position;      // Relative Position of Tile
         private List<Tile>      _neighbors;     // Unordered list of neighbor tiles
         private List<Vector3>   _extents;       // Edges of tile space in counterclockwise order
+        private List<Vector3>   _corners;
         #endregion
 
         #region Properties
@@ -18,6 +19,7 @@ namespace Planets
         public Vector3          Position    => _position;
         public List<Tile>       Neighbors   => _neighbors;
         public List<Vector3>    Extents     => _extents;
+        public List<Vector3>    Corners    => _corners;
         #endregion
 
         public Tile(int i, Vector3 pos)
@@ -25,6 +27,7 @@ namespace Planets
             _neighbors  = new List<Tile>();
             _index      = i;
             _position   = pos;
+            _corners    = new List<Vector3>();
         }
 
         #region Methods
@@ -83,7 +86,7 @@ namespace Planets
 
         /// <summary>
         /// Creates the extent positions of the Tile, not the corners. Extent points are stored in _extents of the Tile 
-        /// in CC order.
+        /// in Neighbor order.
         /// </summary>
         /// <param name="Planet_Pos"></param>
         /// <param name="Ext_Frac"></param>
@@ -102,74 +105,98 @@ namespace Planets
                 
                 ext_poss.Add(ext_pos);
             }
+            _extents = ext_poss;
+            return _extents;
+        }
 
-            /*  Re order extents to be in counterclockwise order    */
-            int current_point               = 0;        //This defines which extent point is currently selected to measure from
+        /// <summary>
+        /// Sorts neighbors into CC order.
+        /// </summary>
+        /// <returns></returns>
+        public List<Tile> Sort_Neighbors()
+        {
+            Vector3 pos                         = _position;
+            Vector3 Normal                      = (_position - Vector3.zero).normalized;
+            List<Vector3> neighbor_positions    = new List<Vector3>();
+            List<Tile> sorted_neighbors         = new List<Tile>();
+
+            int current_point                   = 0;    //This defines which extent point is currently selected to measure from
                                                         //  It's fine that this isn't in the order defined by the original neighbor
                                                         //  list because they have the same number of points anyway.
-            
-            _extents.Add(ext_poss[0]);  //First extent point is always first
 
-            for(int i = 0; i < ext_poss.Count; i++)
+            //Project neighbors onto normal plane
+            for (int i = 0; i < _neighbors.Count; i++)
             {
-                float minAngle              = float.PositiveInfinity;               //used to find smallest angle of next checks
-                
-                Vector3 A                   = (pos - ext_poss[current_point]).normalized; //Define first vector pointing from tile origin to extent point
-                Vector3 C                   = Vector3.zero;
+                Vector3 neighbor_pos            = pos + Vector3.ProjectOnPlane(_neighbors[i].Position, Normal);
+                neighbor_positions.Add(neighbor_pos);
+            }
 
-                for(int j = 0; j < ext_poss.Count; j++)
+            sorted_neighbors.Add(_neighbors[0]);    //First neighbor is always first
+            for (int i = 0; i < _neighbors.Count; i++)
+            {
+                float minAngle                  = float.PositiveInfinity;   //used to find smallest angle of the next checks
+
+                Vector3 A                       = (pos - neighbor_positions[current_point]).normalized;   //Define first vector pointing from tile origin to neighbor
+                int C                           = 0;
+
+                for (int j = 0; j < _neighbors.Count; j++)
                 {
-                    if(j != current_point)    //No point in checking the angle between an extent point and itself
+                    if (j != current_point)  //No point in checking the angle between a neighbor and itself
                     {
                         //Define second vector pointing from tile origin to a different extent point
-                        Vector3 B           = (pos - ext_poss[j]).normalized;
+                        Vector3 B = (pos - neighbor_positions[j]).normalized;
 
                         //Cross returns a normal vector following the left hand rule, if that normal is the same as the Normal of the
                         //  planet, then the angle being measured is on the correct side.
-                        //Also don't need to check the angle of the last extent being measured.
-                        if((Vector3.Cross(B, A).normalized - Normal).magnitude < 0.0001f && i != ext_poss.Count - 1)
+                        //  Also don't need to check the angle of the last extent being measured.
+                        if ((Vector3.Cross(B, A).normalized - Normal).magnitude < 0.0001f && i != _neighbors.Count - 1)
                         {
-                            float f         = Vector3.Angle(A, B);
+                            float f = Vector3.Angle(A, B);
 
-                            if(f < minAngle)
+                            if (f < minAngle)
                             {
-                                minAngle        = f;
-                                C               = ext_poss[j];
-                                current_point   = j;
+                                minAngle = f;
+                                C = j;
+                                current_point = j;
                             }
                         }
                     }
                 }
 
-                if(C != Vector3.zero)   //if it didn't redefine C then there is either a mistake or this is the last extent point
+                if (C != 0)  //If it didn't redefine C then there is either a problem or this is the last neighbor
                 {
-                    //Now C should be the nearest extent point in the CC direction so add it to _extents
-                    _extents.Add(C);
+                    //Now C should be nearest neighbor in the CC direction so add it to the list
+                    sorted_neighbors.Add(_neighbors[C]);
 
                     //Debug.Log(i.ToString() + " -> " + decided.ToString() + 
                     //    " \t : Angle: \t " + minAngle + 
                     //    " \t : Cross: \t " + (Vector3.Cross(A, pos - C).normalized));
-                }else if(i != ext_poss.Count - 1)
+                }
+                else if (i != _neighbors.Count - 1)
                 {
-                    _extents.Add(ext_poss[i]);
+                    sorted_neighbors.Add(_neighbors[0]);
                 }
             }
-            return _extents;
+
+            _neighbors = sorted_neighbors;
+            return sorted_neighbors;
         }
 
         /// <summary>
-        /// Uses magical trigonometry to find the corners between each _extent point.
+        /// Uses magical trigonometry to find the corners between each _extent point. Then it puts them in CC order.
         /// </summary>
         /// <returns></returns>
-        public List<Vector3> Calculate_Corners()
+        public List<Vector3> Calculate_Corners(float extent_frac)
         {
             //       /q\       // This is a trig problem, easy to solve.
             //    C /   \ A    // Known: x, Q, b, B, d, D | Desired: a, A, c, C, q
             //     /a_Q_c\     // Law of Sines: A/Sin(a) = C/Sin(c) = Q/Sin(q)
-            // j   \b   d/  i  //
+            // j   \b   d/   i //
             //    D \   / B    // A = Q * (Sin(a) / Sin(q)) | C = Q * (Sin(c) / Sin(q))
             //       \x/       // What I really want is the point at q, I can get it with the length of A or C.
 
+            float fraction = (extent_frac < 0.5f) ? extent_frac : 0.49999f;
+            Set_Extents(fraction);
             List<Vector3> corners       = new List<Vector3>();
             Vector3 Normal              = (_position - Vector3.zero).normalized;
 
@@ -199,36 +226,86 @@ namespace Planets
 
                 Vector3 corner          = _extents[i] + (left_extent * C);
                 corners.Add(corner);
+                _corners.Add(corner);
             }
+            Sort_Corners(ref corners);
 
             return corners;
+        }
+        private List<Vector3> Sort_Corners(ref List<Vector3> corners)
+        {
+            Vector3 pos = _position;
+            Vector3 Normal = (_position - Vector3.zero).normalized;
+            List<Vector3> sorted_corners = new List<Vector3>();
+
+            int current = 0;
+
+            sorted_corners.Add(corners[0]);
+            for (int i = 0; i < corners.Count; i++)
+            {
+                float minAngle = float.PositiveInfinity;
+
+                Vector3 A = (pos - corners[current]).normalized;
+                Vector3 C = Vector3.zero;
+
+                for (int j = 0; j < corners.Count; j++)
+                {
+                    if(j != current)
+                    {
+                        Vector3 B = (pos - corners[j]).normalized;
+
+                        if((Vector3.Cross(B, A).normalized - Normal).magnitude < 0.0001f && i != corners.Count - 1)
+                        {
+                            float f = Vector3.Angle(A, B);
+
+                            if(f < minAngle)
+                            {
+                                minAngle = f;
+                                C = corners[j];
+                                current = j;
+                            }
+                        }
+                    }
+                }
+
+                if(C != Vector3.zero)
+                {
+                    sorted_corners.Add(C);
+                }
+                else if(i != corners.Count - 1)
+                {
+                    sorted_corners.Add(corners[0]);
+                }
+            }
+
+            _corners = sorted_corners;
+            return sorted_corners;
         }
 
         public void Generate_Tile_Triangles_and_Vertices(ref List<int> Triangles, ref List<Vector3> Vertices, float extent_frac)
         {
-            float fraction = (extent_frac < 0.5f) ? extent_frac : 0.4999f;
             int count = 0;
-            List<Vector3> extents = Set_Extents(fraction);
-            List<Vector3> corners = Calculate_Corners();
+
+            Calculate_Corners(extent_frac);
 
             int start = Vertices.Count;
 
             Vertices.Add(_position);
-            for (int i = 0; i < corners.Count; i++)
+            for (int i = 0; i < _corners.Count; i++)
             {
-                Vertices.Add(corners[i]);
+                Vertices.Add(_corners[i]);
             }
             //Debug.Log(corners.Count + " " + extents.Count);
-            for(int i = 0; i < corners.Count; i++)
+            for(int i = 0; i < _corners.Count; i++)
             {
                 count++;
-                int j = (i < corners.Count - 1) ? (i + 1) : 0;
+                int j = (i < _corners.Count - 1) ? (i + 1) : 0;
 
                 Triangles.Add(start);
                 Triangles.Add(start + j + 1);
                 Triangles.Add(start + i + 1);
 
-                Debug.Log("Triangle: " + count + " " + start + "," + (start + j) + "," + (start + i));
+                //Debug.Log("Triangle: " + count + " " + start + "," + (start + j + 1) + "," + (start + i + 1));
             }
         }
 
