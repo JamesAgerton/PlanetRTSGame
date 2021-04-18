@@ -82,7 +82,7 @@ Material:
     - _SpecularHighlights: 1
     - _SrcBlend: 1
     - _Surface: 0
-    - _WireThickness: 738
+    - _WireThickness: 538
     - _WorkflowMode: 1
     - _ZWrite: 1
     m_Colors:

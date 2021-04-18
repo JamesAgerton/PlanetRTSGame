@@ -93,6 +93,13 @@ namespace Planets
         /// <returns></returns>
         public List<Vector3> Set_Extents(float Ext_Frac)
         {
+            if(_neighbors.Count < 3)
+            {
+                string msg = "Not enough neighbors in Tile: " + _index;
+                Debug.LogError(msg);
+                return null;
+            }
+
             Vector3 pos             = _position;
             Vector3 Normal          = (_position - Vector3.zero).normalized;
             List<Vector3> ext_poss  = new List<Vector3>();
@@ -115,6 +122,13 @@ namespace Planets
         /// <returns></returns>
         public List<Tile> Sort_Neighbors()
         {
+            if(_neighbors.Count < 3)
+            {
+                string msg = "Not enough Neighbors in Tile: " + _index;
+                Debug.LogError(msg);
+                return null;
+            }
+
             Vector3 pos                         = _position;
             Vector3 Normal                      = (_position - Vector3.zero).normalized;
             List<Vector3> neighbor_positions    = new List<Vector3>();
@@ -195,6 +209,13 @@ namespace Planets
             //    D \   / B    // A = Q * (Sin(a) / Sin(q)) | C = Q * (Sin(c) / Sin(q))
             //       \x/       // What I really want is the point at q, I can get it with the length of A or C.
 
+            if (_neighbors.Count < 3)
+            {
+                string msg = "Not enough neighbors in Tile: " + _index;
+                Debug.LogError(msg);
+                return null;
+            }
+
             float fraction = (extent_frac < 0.5f) ? extent_frac : 0.49999f;
             Set_Extents(fraction);
             List<Vector3> corners       = new List<Vector3>();
@@ -234,6 +255,13 @@ namespace Planets
         }
         private List<Vector3> Sort_Corners(ref List<Vector3> corners)
         {
+            if (_corners.Count < 3)
+            {
+                string msg = "Not enough neighbors in Tile: " + _index;
+                Debug.LogError(msg);
+                return null;
+            }
+
             Vector3 pos = _position;
             Vector3 Normal = (_position - Vector3.zero).normalized;
             List<Vector3> sorted_corners = new List<Vector3>();
@@ -286,26 +314,27 @@ namespace Planets
         {
             int count = 0;
 
-            Calculate_Corners(extent_frac);
-
-            int start = Vertices.Count;
-
-            Vertices.Add(_position);
-            for (int i = 0; i < _corners.Count; i++)
+            if (Calculate_Corners(extent_frac) != null)
             {
-                Vertices.Add(_corners[i]);
-            }
-            //Debug.Log(corners.Count + " " + extents.Count);
-            for(int i = 0; i < _corners.Count; i++)
-            {
-                count++;
-                int j = (i < _corners.Count - 1) ? (i + 1) : 0;
+                int start = Vertices.Count;
 
-                Triangles.Add(start);
-                Triangles.Add(start + j + 1);
-                Triangles.Add(start + i + 1);
+                Vertices.Add(_position);
+                for (int i = 0; i < _corners.Count; i++)
+                {
+                    Vertices.Add(_corners[i]);
+                }
+                //Debug.Log(corners.Count + " " + extents.Count);
+                for (int i = 0; i < _corners.Count; i++)
+                {
+                    count++;
+                    int j = (i < _corners.Count - 1) ? (i + 1) : 0;
 
-                //Debug.Log("Triangle: " + count + " " + start + "," + (start + j + 1) + "," + (start + i + 1));
+                    Triangles.Add(start);
+                    Triangles.Add(start + j + 1);
+                    Triangles.Add(start + i + 1);
+
+                    //Debug.Log("Triangle: " + count + " " + start + "," + (start + j + 1) + "," + (start + i + 1));
+                }
             }
         }
 
