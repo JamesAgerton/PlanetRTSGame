@@ -139,6 +139,27 @@ namespace Planets
 
             return 0;
         }
+
+        /// <summary>
+        /// Finds the tile which a point is within using latitude and longitude.
+        /// returns -1 on no tile.
+        /// </summary>
+        /// <param name="point"></param>
+        /// <returns></returns>
+        public int Point_To_Tile(Vector3 point)
+        {
+            if(Tiles.Count > 0)
+            {
+                for (int i = 0; i < Tiles.Count; i++)
+                {
+                    if (Tiles[i].Is_Point_on_Tile(point))
+                    {
+                        return i;
+                    }
+                }
+            }
+            return -1;
+        }
     }
 }
 

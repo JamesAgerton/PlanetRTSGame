@@ -679,5 +679,5 @@ MonoBehaviour:
   _rotation_speed: 90
   _min_vertical_angle: -89
   _max_vertical_angle: 89
-  _max_distance: 5
+  _max_distance: 10
   _min_distance: 0.5

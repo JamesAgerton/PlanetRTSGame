@@ -15,9 +15,8 @@ public class FibonacciTester : MonoBehaviour
     enum _mesh_type { RAW, TILED };
 
     #region Variables (PRIVATE)
-    [SerializeField, Range(50, MAX_TILES)]   //  1474 is the number just before the north pole generation creates overlapping tiles
-                                             //      at 1083 fewer edge issues occur.
-    int _num_points = 100;
+    [SerializeField, Range(50, MAX_TILES)]  //  1474 is the number just before the north pole generation creates overlapping tiles
+    int _num_points = 100;                  //      at 1083 fewer edge issues occur.
     [SerializeField, Range(0f, 0.2f)]
     float _tile_seperation = 0.02f;
     [SerializeField]
@@ -29,15 +28,10 @@ public class FibonacciTester : MonoBehaviour
     [SerializeField]
     GameObject _tile_marker_prefab;
 
-    float _current_radius = 1f;
-    float _current_points = 100;
-    float _current_seperation = 0.02f;
-    _mesh_type _current_mesh_type = _mesh_type.RAW;
-
     Planet _planet;
     Mesh _mesh;
+    MeshCollider _mesh_collider;
     MeshFilter _filter;
-    MeshRenderer _renderer;
     List<GameObject> _tile_markers;
     #endregion
 
@@ -53,7 +47,7 @@ public class FibonacciTester : MonoBehaviour
         _planet = new Planet(_num_points, _radius);
         _planet.Generate_Planet(_tile_seperation);
         _filter = GetComponent<MeshFilter>();
-        _renderer = GetComponent<MeshRenderer>();
+        _mesh_collider = gameObject.AddComponent<MeshCollider>();
 
         Make_Mesh();
 
@@ -65,78 +59,54 @@ public class FibonacciTester : MonoBehaviour
             }
             _tile_markers.Clear();
         }
+
+        // Add tile markers for some reason?
         _tile_markers = new List<GameObject>();
-        for (int i = 0; i < _planet.Tiles.Count; i++)
+        if (_tile_marker_prefab != null)
         {
-            _tile_markers.Add(Instantiate(_tile_marker_prefab));
-            _tile_markers[i].transform.SetParent(this.transform);
-            _tile_markers[i].SetActive(false);
+            for (int i = 0; i < _planet.Tiles.Count; i++)
+            {
+                _tile_markers.Add(Instantiate(_tile_marker_prefab));
+                _tile_markers[i].transform.SetParent(this.transform);
+                _tile_markers[i].SetActive(false);
+            }
+            foreach (GameObject tile in _tile_markers)
+            {
+                tile.SetActive(false);
+            }
+
+            for (int i = 0; i < _num_points; i++)
+            {
+                _tile_markers[i].transform.position = transform.TransformPoint((_planet.Tiles[i].Position).normalized * _radius * 1.001f);
+                _tile_markers[i].transform.forward = transform.position - transform.TransformPoint(_planet.Tiles[i].Position);
+                _tile_markers[i].SetActive(true);
+
+                Vector3 pos = _planet.Tiles[i].Position.normalized;
+                float Lat = Mathf.Asin(pos.y) * Mathf.Rad2Deg;
+                float Long = Mathf.Atan2(pos.z, pos.x) * Mathf.Rad2Deg;
+                string LatLong = i.ToString() + "\n" + Lat.ToString() + "\n" + Long.ToString();
+                _tile_markers[i].transform.GetChild(0).GetComponent<Text>().text = LatLong;
+
+                float minsize = float.PositiveInfinity;
+                foreach (Vector3 extent in _planet.Tiles[i].Extents)
+                {
+                    float dist = Vector3.Distance(_planet.Tiles[i].Position, extent);
+                    if (dist < minsize)
+                        minsize = dist;
+                }
+
+                _tile_markers[i].transform.GetComponent<RectTransform>().localScale = Vector3.one * minsize;
+            }
         }
     }
 
     private void Update()
     {
-        if (_selection <= 0)
+        _selection = Mathf.Clamp(_selection, 0, _planet.Tiles.Count - 1);
+
+        if (Input.GetMouseButton(0))
         {
-            _selection = 0;
-        }
-        else if (_selection >= _num_points)
-        {
-            _selection = _num_points - 1;
-        }
-
-        if (_radius <= 1f)
-        {
-            _radius = 1f;
-        }
-
-        Mathf.Clamp(_num_points, 50, 2500);
-
-        if (_current_points != _num_points ||
-            _current_radius != _radius ||
-            _current_seperation != _tile_seperation ||
-            _current_mesh_type != _mesh_type_shown)
-        {
-            _planet = new Planet(_num_points, _radius);
-            _current_radius = _radius;
-            _current_points = _num_points;
-            _current_seperation = _tile_seperation;
-            _current_mesh_type = _mesh_type_shown;
-
-            _planet.Generate_Planet(_tile_seperation);
-            Make_Mesh();
-
-            // Add tile markers for some reason?
-            if (_tile_marker_prefab != null)
-            {
-                foreach (GameObject tile in _tile_markers)
-                {
-                    tile.SetActive(false);
-                }
-
-                for (int i = 0; i < _num_points; i++)
-                {
-                    _tile_markers[i].transform.position = transform.TransformPoint((_planet.Tiles[i].Position).normalized * _radius * 1.001f);
-                    _tile_markers[i].transform.forward = transform.position - transform.TransformPoint(_planet.Tiles[i].Position);
-                    _tile_markers[i].SetActive(true);
-
-                    Vector3 pos = _planet.Tiles[i].Position.normalized;
-                    float Lat = Mathf.Asin(pos.y) * Mathf.Rad2Deg;
-                    float Long = Mathf.Atan2(pos.z, pos.x) * Mathf.Rad2Deg;
-                    string LatLong = Lat.ToString() + "\n" + Long.ToString();
-                    _tile_markers[i].transform.GetChild(0).GetComponent<Text>().text = LatLong;
-
-                    float minsize = float.PositiveInfinity;
-                    foreach (Vector3 extent in _planet.Tiles[i].Extents)
-                    {
-                        float dist = Vector3.Distance(_planet.Tiles[i].Position, extent);
-                        if (dist < minsize)
-                            minsize = dist;
-                    }
-
-                    _tile_markers[i].transform.GetComponent<RectTransform>().localScale = Vector3.one * minsize;
-                }
-            }
+            HandleInput();
         }
     }
 
@@ -144,16 +114,39 @@ public class FibonacciTester : MonoBehaviour
     {
         if (Application.isPlaying)
         {
+            //Draw touch
+            Gizmos.color = Color.blue;
+            if (Input.GetMouseButton(0))
+            {
+                Ray inputRay = Camera.main.ScreenPointToRay(Input.mousePosition);
+                RaycastHit hit;
+                if(Physics.Raycast(inputRay, out hit))
+                {
+                    Vector3 point = hit.point;
+
+                    Gizmos.DrawLine(Camera.main.transform.position, point);
+                    Gizmos.DrawWireSphere(point, 0.03f);
+                    float Lat = Mathf.Asin(point.y) * Mathf.Rad2Deg;
+                    float Long = Mathf.Atan2(point.z, point.x) * Mathf.Rad2Deg;
+
+                    Handles.Label(point, Lat.ToString() + "\n" + Long.ToString());
+                }
+                else
+                {
+                    Gizmos.DrawRay(inputRay);
+                }
+            }
+
             // Draw debugs for selected tile
             Gizmos.color = Color.white;
             Vector3 pos = transform.TransformPoint(_planet.Tiles[_selection].Position);
-            Gizmos.DrawSphere(pos, 0.02f);
+            Gizmos.DrawWireSphere(pos, 0.02f);
             Vector3 Normal = (pos - this.transform.position).normalized;
             Gizmos.DrawLine(pos, pos + Normal);
             for (int i = 0; i < _planet.Tiles[_selection].Neighbors.Count; i++)
             {
-                Gizmos.DrawSphere(transform.TransformPoint(_planet.Tiles[_selection].Neighbors[i].Position), 0.015f);
-                Gizmos.DrawSphere(transform.TransformPoint(_planet.Tiles[_selection].Extents[i]), 0.001f);
+                Gizmos.DrawWireSphere(transform.TransformPoint(_planet.Tiles[_selection].Neighbors[i].Position), 0.015f);
+                Gizmos.DrawWireSphere(transform.TransformPoint(_planet.Tiles[_selection].Extents[i]), 0.001f);
 
                 //Find right and left
                 float length = _radius * 0.1f;
@@ -204,6 +197,8 @@ public class FibonacciTester : MonoBehaviour
                 _mesh = new Mesh();
                 _mesh = _planet.Tiled_Mesh;
                 _filter.mesh = _mesh;
+                _mesh_collider.sharedMesh = _mesh;
+                _mesh.RecalculateNormals();
                 break;
             case (_mesh_type.RAW):
                 _mesh = new Mesh();
@@ -211,9 +206,33 @@ public class FibonacciTester : MonoBehaviour
                 _mesh.vertices = _planet.Tile_Positions.ToArray();
                 _mesh.triangles = _planet.Default_Triangles;
                 _filter.mesh = _mesh;
+                _mesh_collider.sharedMesh = _mesh;
                 _mesh.RecalculateNormals();
                 break;
         }
+    }
+
+    void HandleInput()
+    {
+        Ray inputRay = Camera.main.ScreenPointToRay(Input.mousePosition);
+        RaycastHit hit;
+        if(Physics.Raycast(inputRay, out hit))
+        {
+            TouchCell(hit.point);
+        }
+    }
+
+    void TouchCell(Vector3 position)
+    {
+        position = transform.InverseTransformPoint(position);
+        int tile = _planet.Point_To_Tile(position);
+
+        if(tile > 0)
+        {
+            _selection = tile;
+        }
+
+        Debug.Log("touched at " + tile);
     }
     #endregion
 }
