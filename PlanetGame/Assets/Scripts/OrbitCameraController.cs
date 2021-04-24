@@ -40,7 +40,7 @@ public class OrbitCameraController : MonoBehaviour
     // Start is called before the first frame update
     private void Awake()
     {
-        if(_planet == null)
+        if(_target_planet == null)
         {
             _target_planet = GameObject.FindGameObjectWithTag("Planet").GetComponent<FibonacciTester>();
         }

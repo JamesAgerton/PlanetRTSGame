@@ -10,21 +10,24 @@ namespace Planets
         private int             _index;         // Tile index number
         private Vector3         _position;      // Relative Position of Tile
         private List<Tile>      _neighbors;     // Unordered list of neighbor tiles
+        private List<bool>      _bridged_neighbors; //The neighbors which have been bridged.
         private List<Vector3>   _extents;       // Edges of tile space in counterclockwise order
         private List<Vector3>   _corners;
         #endregion
 
         #region Properties
-        public int              Index       => _index;
-        public Vector3          Position    => _position;
-        public List<Tile>       Neighbors   => _neighbors;
-        public List<Vector3>    Extents     => _extents;
-        public List<Vector3>    Corners    => _corners;
+        public int              Index               => _index;
+        public Vector3          Position            => _position;
+        public List<Tile>       Neighbors           => _neighbors;
+        public List<bool>       Bridged_Neighbors   => _bridged_neighbors;
+        public List<Vector3>    Extents             => _extents;
+        public List<Vector3>    Corners             => _corners;
         #endregion
 
         public Tile(int i, Vector3 pos)
         {
             _neighbors  = new List<Tile>();
+            _bridged_neighbors = new List<bool>();
             _index      = i;
             _position   = pos;
             _corners    = new List<Vector3>();
@@ -38,23 +41,26 @@ namespace Planets
         public void Add_Neighbor(Tile neighbor)
         {
             _neighbors.Add(neighbor);
+            bool newBool = false;
+            _bridged_neighbors.Add(newBool);
+
         }
 
         /// <summary>
-        /// Checks if the given tile is in the neighbor list of this Tile
+        /// Returns the neighbor list index, returns -1 if the tile is not a neighbor.
         /// </summary>
         /// <param name="neighbor"></param>
         /// <returns></returns>
-        public bool Is_Neighbor(Tile neighbor)
+        public int Is_Neighbor(Tile neighbor)
         {
-            foreach(Tile tile in Neighbors)
+            for (int i = 0; i < _neighbors.Count; i++)
             {
-                if(tile._index == neighbor._index)
+                if(neighbor.Index == _neighbors[i].Index)
                 {
-                    return  true;
+                    return i;
                 }
             }
-            return  false;
+            return -1;
         }
 
         /// <summary>
@@ -64,6 +70,11 @@ namespace Planets
         public void Set_Neighbors(List<Tile> neighbors)
         {
             _neighbors  = neighbors;
+            foreach(Tile tile in neighbors)
+            {
+                bool newBool = false;
+                _bridged_neighbors.Add(newBool);
+            }
         }
 
         /// <summary>
@@ -310,6 +321,12 @@ namespace Planets
             return sorted_corners;
         }
 
+        /// <summary>
+        /// Creates a simple tile mesh with a triangle between two corners and the center.
+        /// </summary>
+        /// <param name="Triangles"></param>
+        /// <param name="Vertices"></param>
+        /// <param name="extent_frac"></param>
         public void Generate_Tile_Triangles_and_Vertices(ref List<int> Triangles, ref List<Vector3> Vertices, float extent_frac)
         {
             int count = 0;
@@ -336,6 +353,12 @@ namespace Planets
                     //Debug.Log("Triangle: " + count + " " + start + "," + (start + j + 1) + "," + (start + i + 1));
                 }
             }
+        }
+
+        //TODO: Create bridges to neighbors
+        public void Generate_Tile_Bridges(ref List<int> Triangles, ref List<Vector3> Vertices)
+        {
+            //Should be able to use Neighbor list and Is_Neighbor to find the appropriate corners to stitch between.
         }
 
         //Equals is used in IEquatable interface: Lets a comparison to check if two Tiles are equivalent

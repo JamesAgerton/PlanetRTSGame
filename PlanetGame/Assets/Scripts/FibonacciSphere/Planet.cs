@@ -57,7 +57,7 @@ namespace Planets
 
         public void Generate_Planet(float Tile_Seperation)
         {
-            SpherePoints    SP     = _FS.Generate_Whole_Sphere(_num_tiles - 1, _radius);
+            SpherePoints    SP     = _FS.Generate_Delaunay_Sphere(_num_tiles - 1, _radius);
 
             _tile_positions         = SP.Positions;
             _default_triangles      = SP.Triangles;

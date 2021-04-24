@@ -39,13 +39,13 @@ namespace Planets
 
         #region Methods
 
-        public SpherePoints Generate_Whole_Sphere(int num_points, float radius)
+        public SpherePoints Generate_Delaunay_Sphere(int num_points, float radius)
         {
             int[]           triangles;
             List<Vector3>   new_positions = Generate_Fibonacci_Sphere(num_points, radius);
-            triangles       = Generate_Fibonacci_Sphere_Trianges(radius, new_positions);
+            triangles       = Generate_Delaunay_Triangles(radius, new_positions);
 
-            Stitch_Bottom(ref triangles, ref new_positions, radius);
+            Stitch_Delaunay_Bottom(ref triangles, ref new_positions, radius);
 
             SpherePoints    result      = new SpherePoints(new_positions, triangles);
 
@@ -123,7 +123,7 @@ namespace Planets
             return          new Vector2(x, y);
         }
 
-        public int[] Generate_Fibonacci_Sphere_Trianges(float radius, List<Vector3> positions)
+        public int[] Generate_Delaunay_Triangles(float radius, List<Vector3> positions)
         {
             List<Vector2>   flatPos     = new List<Vector2>();
             flatPos         = Stereograph_Project_Sphere(radius, positions);
@@ -134,7 +134,7 @@ namespace Planets
             return          triangles;
         }
 
-        public void Stitch_Bottom(ref int[] tris, ref List<Vector3> positions, float radius)
+        public void Stitch_Delaunay_Bottom(ref int[] tris, ref List<Vector3> positions, float radius)
         {
             Vector3     sPole   = new Vector3(0f, 0f - radius, 0f);
 

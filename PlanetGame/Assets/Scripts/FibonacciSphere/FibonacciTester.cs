@@ -66,7 +66,7 @@ public class FibonacciTester : MonoBehaviour
             _tile_markers.Clear();
         }
         _tile_markers = new List<GameObject>();
-        for (int i = 0; i < MAX_TILES; i++)
+        for (int i = 0; i < _planet.Tiles.Count; i++)
         {
             _tile_markers.Add(Instantiate(_tile_marker_prefab));
             _tile_markers[i].transform.SetParent(this.transform);
@@ -119,7 +119,12 @@ public class FibonacciTester : MonoBehaviour
                     _tile_markers[i].transform.position = transform.TransformPoint((_planet.Tiles[i].Position).normalized * _radius * 1.001f);
                     _tile_markers[i].transform.forward = transform.position - transform.TransformPoint(_planet.Tiles[i].Position);
                     _tile_markers[i].SetActive(true);
-                    _tile_markers[i].transform.GetChild(0).GetComponent<Text>().text = _planet.Tiles[i].Index.ToString();
+
+                    Vector3 pos = _planet.Tiles[i].Position.normalized;
+                    float Lat = Mathf.Asin(pos.y) * Mathf.Rad2Deg;
+                    float Long = Mathf.Atan2(pos.z, pos.x) * Mathf.Rad2Deg;
+                    string LatLong = Lat.ToString() + "\n" + Long.ToString();
+                    _tile_markers[i].transform.GetChild(0).GetComponent<Text>().text = LatLong;
 
                     float minsize = float.PositiveInfinity;
                     foreach (Vector3 extent in _planet.Tiles[i].Extents)
