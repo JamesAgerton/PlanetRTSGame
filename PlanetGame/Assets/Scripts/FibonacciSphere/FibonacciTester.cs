@@ -7,7 +7,7 @@ using Planets;
 using UnityEngine.UI;
 
 
-[ExecuteInEditMode]
+//[ExecuteInEditMode]
 [RequireComponent(typeof(MeshRenderer), typeof(MeshFilter))]
 public class FibonacciTester : MonoBehaviour
 {
@@ -42,12 +42,13 @@ public class FibonacciTester : MonoBehaviour
     #endregion
 
     #region Properties (PUBLIC)
-
+    public Planet Planet => _planet;
+    public float Radius => _radius;
     #endregion
 
     #region Unity Methods
     // Start is called before the first frame update
-    private void Start()
+    private void Awake()
     {
         _planet = new Planet(_num_points, _radius);
         _planet.Generate_Planet(_tile_seperation);
@@ -105,6 +106,7 @@ public class FibonacciTester : MonoBehaviour
             _planet.Generate_Planet(_tile_seperation);
             Make_Mesh();
 
+            // Add tile markers for some reason?
             if (_tile_marker_prefab != null)
             {
                 foreach (GameObject tile in _tile_markers)
@@ -135,53 +137,56 @@ public class FibonacciTester : MonoBehaviour
 
     private void OnDrawGizmos()
     {
-        // Draw debugs for selected tile
-        Gizmos.color = Color.white;
-        Vector3 pos = transform.TransformPoint(_planet.Tiles[_selection].Position);
-        Gizmos.DrawSphere(pos, 0.02f);
-        Vector3 Normal = (pos - this.transform.position).normalized;
-        Gizmos.DrawLine(pos, pos + Normal);
-        for (int i = 0; i < _planet.Tiles[_selection].Neighbors.Count; i++)
+        if (Application.isPlaying)
         {
-            Gizmos.DrawSphere(transform.TransformPoint(_planet.Tiles[_selection].Neighbors[i].Position), 0.015f);
-            Gizmos.DrawSphere(transform.TransformPoint(_planet.Tiles[_selection].Extents[i]), 0.001f);
-
-            //Find right and left
-            float length = _radius * 0.1f;
-            Gizmos.color = Color.magenta;
-            Vector3 right = Vector3.Cross(pos - _planet.Tiles[_selection].Extents[i], Normal).normalized * length;
-            Gizmos.DrawLine(transform.TransformPoint(_planet.Tiles[_selection].Extents[i]), transform.TransformPoint(_planet.Tiles[_selection].Extents[i]) + right);
-            Gizmos.color = Color.green;
-            Vector3 left = Vector3.Cross(Normal, pos - _planet.Tiles[_selection].Extents[i]).normalized * length;
-            Gizmos.DrawLine(transform.TransformPoint(_planet.Tiles[_selection].Extents[i]), transform.TransformPoint(_planet.Tiles[_selection].Extents[i]) + left);
-
-            for (int j = 0; j < _planet.Tiles[_selection].Corners.Count; j++)
+            // Draw debugs for selected tile
+            Gizmos.color = Color.white;
+            Vector3 pos = transform.TransformPoint(_planet.Tiles[_selection].Position);
+            Gizmos.DrawSphere(pos, 0.02f);
+            Vector3 Normal = (pos - this.transform.position).normalized;
+            Gizmos.DrawLine(pos, pos + Normal);
+            for (int i = 0; i < _planet.Tiles[_selection].Neighbors.Count; i++)
             {
-                Gizmos.color = Color.Lerp(Color.blue, Color.white, (float)j / (float)_planet.Tiles[_selection].Corners.Count);
-                Gizmos.DrawWireSphere(transform.TransformPoint(_planet.Tiles[_selection].Corners[j]), 0.025f);
-                Handles.Label(transform.TransformPoint(_planet.Tiles[_selection].Corners[j]), j.ToString());
-            }
-            Handles.Label(transform.TransformPoint(_planet.Tiles[_selection].Extents[i]), i.ToString());
-            Handles.Label(transform.TransformPoint(_planet.Tiles[_selection].Neighbors[i].Position), i.ToString());
-        }
+                Gizmos.DrawSphere(transform.TransformPoint(_planet.Tiles[_selection].Neighbors[i].Position), 0.015f);
+                Gizmos.DrawSphere(transform.TransformPoint(_planet.Tiles[_selection].Extents[i]), 0.001f);
 
-        //Draw all points on the sphere
-        /*
-        for (int i = 0; i < _planet.Tiles.Count; i++)
-        {
-            Gizmos.color = Color.Lerp(Color.green, Color.blue, ((float)i / (float)_planet.Tiles.Count));
-            if(i == _selection)
-            {
-                Gizmos.color = Color.white;
-                foreach(Tile tile in _planet.Tiles[_selection].Neighbors)
+                //Find right and left
+                float length = _radius * 0.1f;
+                Gizmos.color = Color.magenta;
+                Vector3 right = Vector3.Cross(pos - _planet.Tiles[_selection].Extents[i], Normal).normalized * length;
+                Gizmos.DrawLine(transform.TransformPoint(_planet.Tiles[_selection].Extents[i]), transform.TransformPoint(_planet.Tiles[_selection].Extents[i]) + right);
+                Gizmos.color = Color.green;
+                Vector3 left = Vector3.Cross(Normal, pos - _planet.Tiles[_selection].Extents[i]).normalized * length;
+                Gizmos.DrawLine(transform.TransformPoint(_planet.Tiles[_selection].Extents[i]), transform.TransformPoint(_planet.Tiles[_selection].Extents[i]) + left);
+
+                for (int j = 0; j < _planet.Tiles[_selection].Corners.Count; j++)
                 {
-                    Gizmos.DrawWireSphere(transform.TransformPoint(tile.Position), 0.06f);
+                    Gizmos.color = Color.Lerp(Color.blue, Color.white, (float)j / (float)_planet.Tiles[_selection].Corners.Count);
+                    Gizmos.DrawWireSphere(transform.TransformPoint(_planet.Tiles[_selection].Corners[j]), 0.025f);
+                    Handles.Label(transform.TransformPoint(_planet.Tiles[_selection].Corners[j]), j.ToString());
                 }
+                Handles.Label(transform.TransformPoint(_planet.Tiles[_selection].Extents[i]), i.ToString());
+                Handles.Label(transform.TransformPoint(_planet.Tiles[_selection].Neighbors[i].Position), i.ToString());
             }
 
-            Gizmos.DrawSphere(transform.TransformPoint(_planet.Tiles[i].Position), 0.05f);
+            //Draw all points on the sphere
+            /*
+            for (int i = 0; i < _planet.Tiles.Count; i++)
+            {
+                Gizmos.color = Color.Lerp(Color.green, Color.blue, ((float)i / (float)_planet.Tiles.Count));
+                if(i == _selection)
+                {
+                    Gizmos.color = Color.white;
+                    foreach(Tile tile in _planet.Tiles[_selection].Neighbors)
+                    {
+                        Gizmos.DrawWireSphere(transform.TransformPoint(tile.Position), 0.06f);
+                    }
+                }
+
+                Gizmos.DrawSphere(transform.TransformPoint(_planet.Tiles[i].Position), 0.05f);
+            }
+            */
         }
-        */
     }
     #endregion
 
