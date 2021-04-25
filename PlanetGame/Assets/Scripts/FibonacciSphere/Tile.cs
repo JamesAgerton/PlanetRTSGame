@@ -265,6 +265,12 @@ namespace Planets
 
             return corners;
         }
+        
+        /// <summary>
+        /// Put corners into CC order.
+        /// </summary>
+        /// <param name="corners"></param>
+        /// <returns></returns>
         private List<Vector3> Sort_Corners(ref List<Vector3> corners)
         {
             if (_corners.Count < 3)
@@ -362,153 +368,147 @@ namespace Planets
             //Should be able to use Neighbor list and Is_Neighbor to find the appropriate corners to stitch between.
         }
 
-        public bool Is_Point_on_Tile(Vector3 point)
+        public bool Is_Point_on_Tile(Vector3 point, int pole)
         {
-            Vector2 point_LatLong = new Vector2(Point_To_Long(point), Point_To_Lat(point));
+            Vector2 point_LongLat = new Vector2(Point_To_Long(point), Point_To_Lat(point));
+            float CLL_Max_X = float.NegativeInfinity, CLL_Min_X = float.PositiveInfinity;
+            bool DoItAgain = false;
 
-            List<Vector2> Corner_LatLongs = new List<Vector2>();
+            List<Vector2> Corner_LongLats = new List<Vector2>();
 
             if (_corners.Count >= 3)    //  Needs 3 or more corners for a polygon
             {
-                for (int j = 0; j < _corners.Count; j++)
+                int c = 0;
+                int n = _corners.Count;
+
+                for (int k = 0; k < n; k++)
                 {
-                    Vector2 cLL = new Vector2(Point_To_Long(_corners[j]), Point_To_Lat(_corners[j]));
-                    Corner_LatLongs.Add(cLL);
+                    Vector2 cLL = new Vector2(Point_To_Long(_corners[k]), Point_To_Lat(_corners[k]));
+
+                    if (cLL.x > CLL_Max_X)
+                        CLL_Max_X = cLL.x;
+                    else if (cLL.x < CLL_Min_X)
+                        CLL_Min_X = cLL.x;
+
+                    Corner_LongLats.Add(cLL);
                 }
 
-                // New point to create a line segment
-                Vector2 extreme = new Vector2(point_LatLong.x + 0.5f, point_LatLong.y);
-                
-
-                // Count intersection of the above line with sides of polygon
-                int count = 0, i = 0;
-                do
+                switch (pole)
                 {
-                    int next = (i + 1) % _corners.Count;
-
-                    // Check if the line segment from point_LatLong to extreme intersects
-                    // with the line segment from Corner_LatLongs[i] to Corner_LatLongs[next]
-                    if (doIntersect(Corner_LatLongs[i], Corner_LatLongs[next], point_LatLong, extreme))
-                    {
-                        // if the point 'point_LatLong' is colinear with line segment 'i-next',
-                        // then check if it lies on segment. If it lies, return true,
-                        // otherwise false
-                        if (orientation(Corner_LatLongs[i], point_LatLong, Corner_LatLongs[next]) == 0)
+                    case (0):
+                        Vector2 CLL0 = Corner_LongLats[0];
+                        for (int i = 1; i <= n; i++)
                         {
-                            return onSegment(Corner_LatLongs[i], point_LatLong, Corner_LatLongs[next]);
+                            Vector2 CLL2 = Corner_LongLats[i % n];
+
+                            if (Vector2.Distance(CLL0, CLL2) > 85f)
+                            {
+                                DoItAgain = true;
+                                if (CLL2.x > 0f)
+                                {
+                                    CLL2.x -= 360f;
+                                    Corner_LongLats[i % n] = CLL2;
+                                }
+                            }
+
+                            CLL0 = CLL2;
                         }
+                        break;
+                    case (1):
+                        //TODO: Order pole points by x value, then insert the last couple points to close off the polygon
+                        Corner_LongLats.Insert(Corner_LongLats.Count - 1, new Vector2(-180f, 90f));
+                        Corner_LongLats.Insert(Corner_LongLats.Count - 1, new Vector2(180f, 90f));
+                        //return false;
+                        break;
+                    case (-1):
+                        //TODO: Order pole points by x value, then insert the last couple points to close off the polygon
+                        Corner_LongLats.Insert(Corner_LongLats.Count, new Vector2(180f, -90f));
+                        Corner_LongLats.Insert(Corner_LongLats.Count, new Vector2(-180f, -90f));
+                        //return false;
+                        break;
+                }
 
-                        count++;
+                Vector2 CLL1 = Corner_LongLats[0];
+                for (int i = 1; i <= Corner_LongLats.Count; i++)
+                {
+                    Vector2 CLL2 = Corner_LongLats[i % Corner_LongLats.Count];
+
+                    Debug.DrawLine(CLL1, CLL2, Color.Lerp(Color.cyan, Color.magenta, ((float)i/(float)(Corner_LongLats.Count - 1))));
+
+
+                    if (point_LongLat.x > Mathf.Min(CLL1.x, CLL2.x) &&
+                        point_LongLat.x <= Mathf.Max(CLL1.x, CLL2.x) &&
+                        point_LongLat.y <= Mathf.Max(CLL1.y, CLL2.y) &&
+                        CLL1.x != CLL2.x)
+                    {
+                        float xinters = (point_LongLat.x - CLL1.x) * 
+                                        (CLL2.y - CLL1.y) / 
+                                        (CLL2.x - CLL1.x) + 
+                                        CLL1.y;
+                        if(CLL1.y == CLL2.y || point_LongLat.y <= xinters)
+                        {
+                            c++;
+                        }
                     }
-                    i = next;
-                } while (i != 0);
+                    CLL1 = CLL2;
+                }
 
-                // Return true if count is odd, false otherwise
-                return (count % 2 == 1);
+                if (DoItAgain)
+                {
+                    CLL1 = Corner_LongLats[0] + new Vector2(360f, 0f);
+                    for (int i = 1; i <= Corner_LongLats.Count; i++)
+                    {
+                        Vector2 CLL2 = Corner_LongLats[i % Corner_LongLats.Count] + new Vector2(360f, 0f);
+
+                        Debug.DrawLine(CLL1, CLL2, Color.Lerp(Color.cyan, Color.magenta, ((float)i / (float)(Corner_LongLats.Count - 1))));
+
+
+                        if (point_LongLat.x > Mathf.Min(CLL1.x, CLL2.x) &&
+                            point_LongLat.x <= Mathf.Max(CLL1.x, CLL2.x) &&
+                            point_LongLat.y <= Mathf.Max(CLL1.y, CLL2.y) &&
+                            CLL1.x != CLL2.x)
+                        {
+                            float xinters = (point_LongLat.x - CLL1.x) *
+                                            (CLL2.y - CLL1.y) /
+                                            (CLL2.x - CLL1.x) +
+                                            CLL1.y;
+                            if (CLL1.y == CLL2.y || point_LongLat.y <= xinters)
+                            {
+                                c++;
+                            }
+                        }
+                        CLL1 = CLL2;
+                    }
+                }
+
+                //  must intersect an odd number of lines to be within a polygon
+                return (c % 2 != 0);
             }
             Debug.LogError("Not enough corners, can't find if Tile contains point!");
             return false;
         }
 
-        /// <summary>
-        /// Given three colinear points p, q, r, the function checks if
-        /// point q lies on line segment 'pr'
-        /// Hopefully usable with lat long instead of x y
-        /// </summary>
-        /// <param name="p"></param>
-        /// <param name="q"></param>
-        /// <param name="r"></param>
-        /// <returns></returns>
-        private bool onSegment(Vector2 p, Vector2 q, Vector2 r)
-        {
-            if (q.x <= Mathf.Max(p.x, r.x) && 
-                q.x >= Mathf.Min(p.x, r.x) &&
-                q.y <= Mathf.Max(p.y, r.y) && 
-                q.y >= Mathf.Min(p.y, r.y))
-            {
-                return true;
-            }
-            return false;
-        }
-
-        /// <summary>
-        /// Find orientation of triplet (p, q, r).
-        /// The function returns following values
-        /// 0 --> p, q, r are colinear
-        /// 1 --> Clockwise
-        /// 2 --> Counterclockwise
-        /// </summary>
-        /// <param name="p"></param>
-        /// <param name="q"></param>
-        /// <param name="r"></param>
-        /// <returns></returns>
-        private int orientation(Vector2 p, Vector2 q, Vector2 r)
-        {
-            float val = (q.y - p.y) * (r.x - q.x) - (q.x - p.x) * (r.y - q.y);
-
-            if (val <= 0.0001f) return 0;    //  colinear
-            return (val > 0.0001f) ? 1 : 2;  //  c or cc
-        }
-
-        /// <summary>
-        /// The function return true if line segment 'p1q1' and 'p2q2' intersect.
-        /// </summary>
-        /// <param name="p1"></param>
-        /// <param name="q1"></param>
-        /// <param name="p2"></param>
-        /// <param name="q2"></param>
-        /// <returns></returns>
-        private bool doIntersect(Vector2 p1, Vector2 q1, Vector2 p2, Vector2 q2)
-        {
-            // Find the four orientations needed for general and special cases
-            int o1 = orientation(p1, q1, p2);
-            int o2 = orientation(p1, q1, q2);
-            int o3 = orientation(p2, q2, p1);
-            int o4 = orientation(p2, q2, q1);
-
-            // General case
-            if(o1 != o2 && o3 != o4)
-            {
-                return true;
-            }
-
-            // Special cases
-            // p1, q1 and p2 are colinear and p2 lies on segment p1q1
-            if(o1 == 0 && onSegment(p1, p2, q1))
-            {
-                return true;
-            }
-
-            // p1, q1 and p2 are colinear and q2 lies on legment p1q1
-            if(o2 == 0 && onSegment(p1, q2, q1))
-            {
-                return true;
-            }
-
-            // p2, q2 and p1 are colinear and p1 lies on segment p2q2
-            if (o3 == 0 && onSegment(p2, p1, q2))
-            {
-                return true;
-            }
-
-            // p2, q2 and q1 are colinear and q1 lies on segment p2q2
-            if (o4 == 0 && onSegment(p2, q1, q2))
-            {
-                return true;
-            }
-
-            return false;   // Doesn't fall in any above case
-        }
-
         public float Point_To_Lat(Vector3 point)
         {
-            float Lat = Mathf.Asin(point.y) * Mathf.Rad2Deg;
+            float Lat; // = Mathf.Asin(point.y) * Mathf.Rad2Deg;
+
+            Lat = 90f - Vector3.Angle(Vector3.up, point.normalized);
+
             return Lat;
         }
 
         public float Point_To_Long(Vector3 point)
         {
-            float Long = Mathf.Atan2(point.z, point.x) * Mathf.Rad2Deg;
+            float Long; // = Mathf.Atan2(point.z, point.x) * Mathf.Rad2Deg;
+
+            Long = Vector3.Angle(Vector3.forward, Vector3.ProjectOnPlane(point.normalized, Vector3.up));
+            Vector3 A = -Vector3.forward;
+            Vector3 B = (Vector3.zero - Vector3.ProjectOnPlane(point.normalized, Vector3.up)).normalized;
+            if ((Vector3.Cross(B, A).normalized - Vector3.up).magnitude < 0.001f)
+            {
+                Long *= -1f;
+            }
+
             return Long;
         }
 

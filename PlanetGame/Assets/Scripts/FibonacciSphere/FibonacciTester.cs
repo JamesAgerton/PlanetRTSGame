@@ -81,10 +81,10 @@ public class FibonacciTester : MonoBehaviour
                 _tile_markers[i].transform.forward = transform.position - transform.TransformPoint(_planet.Tiles[i].Position);
                 _tile_markers[i].SetActive(true);
 
-                Vector3 pos = _planet.Tiles[i].Position.normalized;
-                float Lat = Mathf.Asin(pos.y) * Mathf.Rad2Deg;
-                float Long = Mathf.Atan2(pos.z, pos.x) * Mathf.Rad2Deg;
-                string LatLong = i.ToString() + "\n" + Lat.ToString() + "\n" + Long.ToString();
+                Vector3 pos = transform.InverseTransformPoint(_planet.Tiles[i].Position.normalized);
+                float Lat = Point_To_Lat(pos);
+                float Long = Point_To_Long(pos);
+                string LatLong = i.ToString() + "\n" + Long.ToString() + "\n" + Lat.ToString();
                 _tile_markers[i].transform.GetChild(0).GetComponent<Text>().text = LatLong;
 
                 float minsize = float.PositiveInfinity;
@@ -122,14 +122,15 @@ public class FibonacciTester : MonoBehaviour
                 RaycastHit hit;
                 if(Physics.Raycast(inputRay, out hit))
                 {
-                    Vector3 point = hit.point;
+                    Vector3 point = transform.InverseTransformPoint(hit.point);
 
                     Gizmos.DrawLine(Camera.main.transform.position, point);
                     Gizmos.DrawWireSphere(point, 0.03f);
-                    float Lat = Mathf.Asin(point.y) * Mathf.Rad2Deg;
-                    float Long = Mathf.Atan2(point.z, point.x) * Mathf.Rad2Deg;
+                    float Lat = Point_To_Lat(point);
+                    float Long = Point_To_Long(point);
+                    Gizmos.DrawWireSphere(new Vector3(Long, Lat, 0f), 1f);
 
-                    Handles.Label(point, Lat.ToString() + "\n" + Long.ToString());
+                    Handles.Label(point, Long.ToString() + "\n" + Lat.ToString());
                 }
                 else
                 {
@@ -233,6 +234,30 @@ public class FibonacciTester : MonoBehaviour
         }
 
         Debug.Log("touched at " + tile);
+    }
+
+    public float Point_To_Lat(Vector3 point)
+    {
+        float Lat; // = Mathf.Asin(point.y) * Mathf.Rad2Deg;
+
+        Lat = 90f - Vector3.Angle(Vector3.up, point.normalized);
+
+        return Lat;
+    }
+
+    public float Point_To_Long(Vector3 point)
+    {
+        float Long; // = Mathf.Atan2(point.z, point.x) * Mathf.Rad2Deg;
+
+        Long = Vector3.Angle(Vector3.forward, Vector3.ProjectOnPlane(point.normalized, Vector3.up));
+        Vector3 A = -Vector3.forward;
+        Vector3 B = (Vector3.zero - Vector3.ProjectOnPlane(point.normalized, Vector3.up)).normalized;
+        if ((Vector3.Cross(B, A).normalized - Vector3.up).magnitude < 0.001f)
+        {
+            Long *= -1f;
+        }
+
+        return Long;
     }
     #endregion
 }

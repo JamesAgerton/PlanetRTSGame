@@ -148,11 +148,22 @@ namespace Planets
         /// <returns></returns>
         public int Point_To_Tile(Vector3 point)
         {
+            bool go = false;
             if(Tiles.Count > 0)
             {
                 for (int i = 0; i < Tiles.Count; i++)
                 {
-                    if (Tiles[i].Is_Point_on_Tile(point))
+                    int pole = 0;
+                    if (i == 0)
+                    {
+                        pole = 1;
+                    }
+                    else if (i == Tiles.Count - 1)
+                    {
+                        pole = -1;
+                    }
+
+                    if (Tiles[i].Is_Point_on_Tile(point, pole))
                     {
                         return i;
                     }
