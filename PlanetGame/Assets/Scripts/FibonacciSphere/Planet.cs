@@ -148,7 +148,6 @@ namespace Planets
         /// <returns></returns>
         public int Point_To_Tile(Vector3 point)
         {
-            bool go = false;
             if(Tiles.Count > 0)
             {
                 for (int i = 0; i < Tiles.Count; i++)
@@ -169,6 +168,28 @@ namespace Planets
                     }
                 }
             }
+            Debug.Log("Couldn't find tile from point!");
+            return -1;
+        }
+
+        /// <summary>
+        /// Use the mesh triangles to identify tile. Used with raycast Hit.triangleIndex.
+        /// </summary>
+        /// <param name="triIndex"></param>
+        /// <returns></returns>
+        public int Point_To_Tile_Triangle(int triIndex)
+        {
+            if (Tiles.Count > 0)
+            {
+                for (int i = 0; i < Tiles.Count; i++)
+                {
+                    if (Tiles[i].Is_Point_on_Tile_Triangle(triIndex))
+                    {
+                        return i;
+                    }
+                }
+            }
+            Debug.Log("Couldn't find tile from point!");
             return -1;
         }
     }

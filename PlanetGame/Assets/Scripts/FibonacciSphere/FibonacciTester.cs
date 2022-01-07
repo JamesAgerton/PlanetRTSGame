@@ -114,6 +114,79 @@ public class FibonacciTester : MonoBehaviour
     {
         if (Application.isPlaying)
         {
+            //Draw Map
+            Gizmos.DrawLine(new Vector3(0, -90, 0), new Vector3(0, 90, 0));
+            Gizmos.DrawLine(new Vector3(0, -90, 0), new Vector3(360, -90, 0));
+            Gizmos.DrawLine(new Vector3(0, 90, 0), new Vector3(360, 90, 0));
+            Gizmos.DrawLine(new Vector3(360, -90, 0), new Vector3(360, 90, 0));
+
+            Vector3 latlonga, latlongb;
+            for(int j = 0; j < Planet.Tiles.Count; j++)
+            {
+                for(int i = 0; i < Planet.Tiles[j].Corners.Count; i++)
+                {
+                    Vector3 tilepos = new Vector3(Point_To_Long(Planet.Tiles[j].Position) + 180f,
+                        Point_To_Lat(Planet.Tiles[j].Position));
+                    if(i == 0)
+                    {
+                        latlonga = new Vector3(
+                            Planet.Tiles[j].Point_To_Long(Planet.Tiles[j].Corners[Planet.Tiles[j].Corners.Count - 1]) + 180f, 
+                            Planet.Tiles[j].Point_To_Lat(Planet.Tiles[j].Corners[Planet.Tiles[j].Corners.Count - 1])
+                            );
+                        latlongb = new Vector3(
+                            Planet.Tiles[j].Point_To_Long(Planet.Tiles[j].Corners[0]) + 180f, 
+                            Planet.Tiles[j].Point_To_Lat(Planet.Tiles[j].Corners[0])
+                            );
+                    }
+                    else
+                    {
+                        latlonga = new Vector3(
+                            Planet.Tiles[j].Point_To_Long(Planet.Tiles[j].Corners[i]) + 180f,
+                            Planet.Tiles[j].Point_To_Lat(Planet.Tiles[j].Corners[i])
+                            );
+                        latlongb = new Vector3(
+                            Planet.Tiles[j].Point_To_Long(Planet.Tiles[j].Corners[i - 1]) + 180f,
+                            Planet.Tiles[j].Point_To_Lat(Planet.Tiles[j].Corners[i - 1])
+                            );
+                    }
+
+                    if (j != 0 || j != Planet.Tiles.Count - 1)
+                    {
+                        if (Vector3.Distance(latlonga, tilepos) > 300f)
+                        {
+                            if(tilepos.x - latlonga.x > 0)
+                            {
+                                latlonga.x += 360f;
+                            }
+                            else
+                            {
+                                latlonga.x -= 360f;
+                            }
+                        }
+                        if (Vector3.Distance(latlongb, tilepos) > 300f)
+                        {
+                            if(tilepos.x - latlongb.x > 0)
+                            {
+                                latlongb.x += 360f;
+                            }
+                            else
+                            {
+                                latlongb.x -= 360f;
+                            }
+                        }
+                    }
+                    //else
+                    //{
+                    //    //if(latlonga.x > 350 && latlonga.y > 80f)
+                    //    //{
+                    //    //    Debug.DrawLine(latlonga, new Vector3(360, 90, 0));
+                    //    //}
+                    //}
+
+                    Debug.DrawLine(latlonga, latlongb);
+                }
+            }
+
             //Draw touch
             Gizmos.color = Color.blue;
             if (Input.GetMouseButton(0))
@@ -128,7 +201,7 @@ public class FibonacciTester : MonoBehaviour
                     Gizmos.DrawWireSphere(point, 0.03f);
                     float Lat = Point_To_Lat(point);
                     float Long = Point_To_Long(point);
-                    Gizmos.DrawWireSphere(new Vector3(Long, Lat, 0f), 1f);
+                    Gizmos.DrawWireSphere(new Vector3(Long + 180f, Lat, 0f), 1f);
 
                     Handles.Label(point, Long.ToString() + "\n" + Lat.ToString());
                 }
@@ -142,22 +215,10 @@ public class FibonacciTester : MonoBehaviour
             Gizmos.color = Color.white;
             Vector3 pos = transform.TransformPoint(_planet.Tiles[_selection].Position);
             Gizmos.DrawWireSphere(pos, 0.02f);
-            Vector3 Normal = (pos - this.transform.position).normalized;
-            Gizmos.DrawLine(pos, pos + Normal);
+            //Vector3 Normal = (pos - this.transform.position).normalized;
+            //Gizmos.DrawLine(pos, pos + Normal);
             for (int i = 0; i < _planet.Tiles[_selection].Neighbors.Count; i++)
             {
-                Gizmos.DrawWireSphere(transform.TransformPoint(_planet.Tiles[_selection].Neighbors[i].Position), 0.015f);
-                Gizmos.DrawWireSphere(transform.TransformPoint(_planet.Tiles[_selection].Extents[i]), 0.001f);
-
-                //Find right and left
-                float length = _radius * 0.1f;
-                Gizmos.color = Color.magenta;
-                Vector3 right = Vector3.Cross(pos - _planet.Tiles[_selection].Extents[i], Normal).normalized * length;
-                Gizmos.DrawLine(transform.TransformPoint(_planet.Tiles[_selection].Extents[i]), transform.TransformPoint(_planet.Tiles[_selection].Extents[i]) + right);
-                Gizmos.color = Color.green;
-                Vector3 left = Vector3.Cross(Normal, pos - _planet.Tiles[_selection].Extents[i]).normalized * length;
-                Gizmos.DrawLine(transform.TransformPoint(_planet.Tiles[_selection].Extents[i]), transform.TransformPoint(_planet.Tiles[_selection].Extents[i]) + left);
-
                 for (int j = 0; j < _planet.Tiles[_selection].Corners.Count; j++)
                 {
                     Gizmos.color = Color.Lerp(Color.blue, Color.white, (float)j / (float)_planet.Tiles[_selection].Corners.Count);
@@ -167,24 +228,6 @@ public class FibonacciTester : MonoBehaviour
                 Handles.Label(transform.TransformPoint(_planet.Tiles[_selection].Extents[i]), i.ToString());
                 Handles.Label(transform.TransformPoint(_planet.Tiles[_selection].Neighbors[i].Position), i.ToString());
             }
-
-            //Draw all points on the sphere
-            /*
-            for (int i = 0; i < _planet.Tiles.Count; i++)
-            {
-                Gizmos.color = Color.Lerp(Color.green, Color.blue, ((float)i / (float)_planet.Tiles.Count));
-                if(i == _selection)
-                {
-                    Gizmos.color = Color.white;
-                    foreach(Tile tile in _planet.Tiles[_selection].Neighbors)
-                    {
-                        Gizmos.DrawWireSphere(transform.TransformPoint(tile.Position), 0.06f);
-                    }
-                }
-
-                Gizmos.DrawSphere(transform.TransformPoint(_planet.Tiles[i].Position), 0.05f);
-            }
-            */
         }
     }
     #endregion
@@ -219,7 +262,8 @@ public class FibonacciTester : MonoBehaviour
         RaycastHit hit;
         if(Physics.Raycast(inputRay, out hit))
         {
-            TouchCell(hit.point);
+            //TouchCell(hit.point);
+            TouchCell(hit.triangleIndex);
         }
     }
 
@@ -228,12 +272,24 @@ public class FibonacciTester : MonoBehaviour
         position = transform.InverseTransformPoint(position);
         int tile = _planet.Point_To_Tile(position);
 
-        if(tile > 0)
+        if(tile >= 0)
         {
             _selection = tile;
         }
 
         Debug.Log("touched at " + tile);
+    }
+
+    void TouchCell(int triangleIndex)
+    {
+        int tile = _planet.Point_To_Tile_Triangle(triangleIndex);
+
+        if(tile >= 0)
+        {
+            _selection = tile;
+        }
+
+        Debug.Log("touched at " + tile + " triangle: " + triangleIndex);
     }
 
     public float Point_To_Lat(Vector3 point)

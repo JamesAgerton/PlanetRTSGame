@@ -154,9 +154,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fdb3e7d6a10b0454383d6d7702f6eff2, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _num_points: 1474
-  _tile_seperation: 0.2
-  _radius: 6.56
+  _num_points: 140
+  _tile_seperation: 0.1
+  _radius: 7
   _selection: 0
   _mesh_type_shown: 1
   _tile_marker_prefab: {fileID: 3763539363782593512, guid: b2ffeeaf68bfd0941964e2ff35329d80, type: 3}

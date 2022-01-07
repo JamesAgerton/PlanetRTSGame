@@ -22,7 +22,8 @@ namespace Planets
         public List<bool>       Bridged_Neighbors   => _bridged_neighbors;
         public List<Vector3>    Extents             => _extents;
         public List<Vector3>    Corners             => _corners;
-        public Vector3 Normal;
+        public Vector3          Normal;
+        public List<int>        TriangleIndexes;
         #endregion
 
         public Tile(int i, Vector3 pos)
@@ -32,6 +33,7 @@ namespace Planets
             _index      = i;
             _position   = pos;
             _corners    = new List<Vector3>();
+            TriangleIndexes = new List<int>();
         }
 
         #region Methods
@@ -329,13 +331,15 @@ namespace Planets
         }
 
         /// <summary>
-        /// Creates a simple tile mesh with a triangle between two corners and the center.
+        /// Creates a simple tile mesh with a triangle between two corners and the center. Must be generated BEFORE bridging tiles.
         /// </summary>
         /// <param name="Triangles"></param>
         /// <param name="Vertices"></param>
         /// <param name="extent_frac"></param>
         public void Generate_Tile_Triangles_and_Vertices(ref List<int> Triangles, ref List<Vector3> Vertices, float extent_frac)
         {
+            int existingTriangles = Triangles.Count / 3;
+            
             int count = 0;
 
             if (Calculate_Corners(extent_frac) != null)
@@ -350,7 +354,9 @@ namespace Planets
                 //Debug.Log(corners.Count + " " + extents.Count);
                 for (int i = 0; i < _corners.Count; i++)
                 {
+                    TriangleIndexes.Add(existingTriangles + count);
                     count++;
+
                     int j = (i < _corners.Count - 1) ? (i + 1) : 0;
 
                     Triangles.Add(start);
@@ -366,14 +372,25 @@ namespace Planets
         public void Generate_Tile_Bridges(ref List<int> Triangles, ref List<Vector3> Vertices)
         {
             //Should be able to use Neighbor list and Is_Neighbor to find the appropriate corners to stitch between.
+            foreach(Tile tile in _neighbors)
+            {
+
+            }
         }
 
+        /// <summary>
+        /// Checks if cartesian point relative to planet is within this tile. Doesn't work well along edges, should be fine when using the tile position.
+        /// </summary>
+        /// <param name="point">Cartesian point relative to planet.</param>
+        /// <param name="pole">First tile (north pole) = 1, Last tile (South Pole) = -1, otherwise = 0</param>
+        /// <returns></returns>
         public bool Is_Point_on_Tile(Vector3 point, int pole)
         {
             Vector2 point_LongLat = new Vector2(Point_To_Long(point), Point_To_Lat(point));
             float CLL_Max_X = float.NegativeInfinity, CLL_Min_X = float.PositiveInfinity;
             bool DoItAgain = false;
 
+            //Find corners of the tile in longitude and latitude coords
             List<Vector2> Corner_LongLats = new List<Vector2>();
 
             if (_corners.Count >= 3)    //  Needs 3 or more corners for a polygon
@@ -395,6 +412,7 @@ namespace Planets
 
                 switch (pole)
                 {
+                    //Regular cells
                     case (0):
                         Vector2 CLL0 = Corner_LongLats[0];
                         for (int i = 1; i <= n; i++)
@@ -414,17 +432,17 @@ namespace Planets
                             CLL0 = CLL2;
                         }
                         break;
+                    //North Pole
                     case (1):
-                        //TODO: Order pole points by x value, then insert the last couple points to close off the polygon
+                        //Order pole points by x value, then insert the last couple points to close off the polygon
                         Corner_LongLats.Insert(Corner_LongLats.Count - 1, new Vector2(-180f, 90f));
                         Corner_LongLats.Insert(Corner_LongLats.Count - 1, new Vector2(180f, 90f));
-                        //return false;
                         break;
+                    //South Pole
                     case (-1):
-                        //TODO: Order pole points by x value, then insert the last couple points to close off the polygon
+                        //Order pole points by x value, then insert the last couple points to close off the polygon
                         Corner_LongLats.Insert(Corner_LongLats.Count, new Vector2(180f, -90f));
                         Corner_LongLats.Insert(Corner_LongLats.Count, new Vector2(-180f, -90f));
-                        //return false;
                         break;
                 }
 
@@ -432,9 +450,8 @@ namespace Planets
                 for (int i = 1; i <= Corner_LongLats.Count; i++)
                 {
                     Vector2 CLL2 = Corner_LongLats[i % Corner_LongLats.Count];
-
+                    
                     Debug.DrawLine(CLL1, CLL2, Color.Lerp(Color.cyan, Color.magenta, ((float)i/(float)(Corner_LongLats.Count - 1))));
-
 
                     if (point_LongLat.x > Mathf.Min(CLL1.x, CLL2.x) &&
                         point_LongLat.x <= Mathf.Max(CLL1.x, CLL2.x) &&
@@ -488,6 +505,22 @@ namespace Planets
             return false;
         }
 
+        /// <summary>
+        /// Use mesh triangle index to identify triangles. Use with Raycast to find triangle index hit by ray.
+        /// </summary>
+        /// <param name="index"></param>
+        /// <returns></returns>
+        public bool Is_Point_on_Tile_Triangle(int index)
+        {
+            return TriangleIndexes.Contains(index);
+            //return false;
+        }
+
+        /// <summary>
+        /// Find latitude of cartesian point relative to the planet.
+        /// </summary>
+        /// <param name="point">Point relative to the planet.</param>
+        /// <returns></returns>
         public float Point_To_Lat(Vector3 point)
         {
             float Lat; // = Mathf.Asin(point.y) * Mathf.Rad2Deg;
@@ -497,6 +530,11 @@ namespace Planets
             return Lat;
         }
 
+        /// <summary>
+        /// Find longitude of cartesian point relative to the planet.
+        /// </summary>
+        /// <param name="point">Point relative to the planet.</param>
+        /// <returns></returns>
         public float Point_To_Long(Vector3 point)
         {
             float Long; // = Mathf.Atan2(point.z, point.x) * Mathf.Rad2Deg;
