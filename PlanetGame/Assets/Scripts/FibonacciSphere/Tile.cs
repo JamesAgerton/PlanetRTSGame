@@ -9,8 +9,7 @@ namespace Planets
         #region Variables
         private int             _index;         // Tile index number
         private Vector3         _position;      // Relative Position of Tile
-        private List<Tile>      _neighbors;     // Unordered list of neighbor tiles
-        private List<bool>      _bridged_neighbors; //The neighbors which have been bridged.
+        private List<Tile>      _neighbors;     // list of neighbor tiles
         private List<Vector3>   _extents;       // Edges of tile space in counterclockwise order
         private List<Vector3>   _corners;
         #endregion
@@ -19,21 +18,21 @@ namespace Planets
         public int              Index               => _index;
         public Vector3          Position            => _position;
         public List<Tile>       Neighbors           => _neighbors;
-        public List<bool>       Bridged_Neighbors   => _bridged_neighbors;
         public List<Vector3>    Extents             => _extents;
         public List<Vector3>    Corners             => _corners;
         public Vector3          Normal;
         public List<int>        TriangleIndexes;
+        public List<bool> BridgedNeighbors;
         #endregion
 
         public Tile(int i, Vector3 pos)
         {
             _neighbors  = new List<Tile>();
-            _bridged_neighbors = new List<bool>();
             _index      = i;
             _position   = pos;
             _corners    = new List<Vector3>();
             TriangleIndexes = new List<int>();
+            BridgedNeighbors = new List<bool>();
         }
 
         #region Methods
@@ -45,8 +44,7 @@ namespace Planets
         {
             _neighbors.Add(neighbor);
             bool newBool = false;
-            _bridged_neighbors.Add(newBool);
-
+            BridgedNeighbors.Add(newBool);
         }
 
         /// <summary>
@@ -73,10 +71,11 @@ namespace Planets
         public void Set_Neighbors(List<Tile> neighbors)
         {
             _neighbors  = neighbors;
-            foreach(Tile tile in neighbors)
+            BridgedNeighbors = new List<bool>();
+            foreach(Tile ti in neighbors)
             {
                 bool newBool = false;
-                _bridged_neighbors.Add(newBool);
+                BridgedNeighbors.Add(newBool);
             }
         }
 
@@ -365,16 +364,6 @@ namespace Planets
 
                     //Debug.Log("Triangle: " + count + " " + start + "," + (start + j + 1) + "," + (start + i + 1));
                 }
-            }
-        }
-
-        //TODO: Create bridges to neighbors
-        public void Generate_Tile_Bridges(ref List<int> Triangles, ref List<Vector3> Vertices)
-        {
-            //Should be able to use Neighbor list and Is_Neighbor to find the appropriate corners to stitch between.
-            foreach(Tile tile in _neighbors)
-            {
-
             }
         }
 

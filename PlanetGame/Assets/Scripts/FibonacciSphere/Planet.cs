@@ -78,6 +78,9 @@ namespace Planets
                 tile.Generate_Tile_Triangles_and_Vertices(ref _tile_triangles, ref _tile_vertices, fraction);
             }
 
+            //TODO: Bridge tiles together
+            Bridge_Tiles();
+
             _tiled_mesh = new Mesh();
             _tiled_mesh.name = "Tiled Mesh";
             _tiled_mesh.vertices = _tile_vertices.ToArray();
@@ -138,6 +141,49 @@ namespace Planets
             }
 
             return 0;
+        }
+
+        public void Bridge_Tiles()
+        {
+            //int t = 3;
+            for (int t = 0; t < Tiles.Count; t++)
+            {
+                for (int n = 0; n < Tiles[t].Neighbors.Count; n++)
+                {
+                    int neighborid = Tiles[t].Neighbors[n].Is_Neighbor(Tiles[t]) - 1;
+                    if (neighborid == -1)
+                    {
+                        neighborid = Tiles[t].Neighbors[n].Neighbors.Count - 1;
+                    }
+
+                    if (Tiles[t].BridgedNeighbors[n] == false)
+                    {
+
+                        Debug.Log("bridge " + t + "-" + n);
+                        int neigh = n - 1;
+                        if(n == 0)
+                        {
+                            neigh = Tiles[t].Neighbors.Count - 1;
+                        }
+                        int ai = Tile_Triangles[Tiles[t].TriangleIndexes[neigh] * 3 + 1];
+                        int bi = Tile_Triangles[Tiles[t].TriangleIndexes[neigh] * 3 + 2];
+
+                        int Ai = Tile_Triangles[Tiles[t].Neighbors[n].TriangleIndexes[neighborid] * 3 + 1];
+                        int Bi = Tile_Triangles[Tiles[t].Neighbors[n].TriangleIndexes[neighborid] * 3 + 2];
+
+                        Tile_Triangles.Add(ai);
+                        Tile_Triangles.Add(Ai);
+                        Tile_Triangles.Add(bi);
+
+                        Tile_Triangles.Add(ai);
+                        Tile_Triangles.Add(Bi);
+                        Tile_Triangles.Add(Ai);
+
+                        Tiles[t].BridgedNeighbors[n] = true;
+                        Tiles[t].Neighbors[n].BridgedNeighbors[neighborid] = true;
+                    }
+                }
+            }
         }
 
         /// <summary>

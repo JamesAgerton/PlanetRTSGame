@@ -175,13 +175,13 @@ public class FibonacciTester : MonoBehaviour
                             }
                         }
                     }
-                    //else
-                    //{
-                    //    //if(latlonga.x > 350 && latlonga.y > 80f)
-                    //    //{
-                    //    //    Debug.DrawLine(latlonga, new Vector3(360, 90, 0));
-                    //    //}
-                    //}
+                    else
+                    {
+                        if (latlonga.x > 330 && latlonga.y > 80f)
+                        {
+                            Debug.DrawLine(latlonga, new Vector3(360, 90, 0));
+                        }
+                    }
 
                     Debug.DrawLine(latlonga, latlongb);
                 }
@@ -219,15 +219,69 @@ public class FibonacciTester : MonoBehaviour
             //Gizmos.DrawLine(pos, pos + Normal);
             for (int i = 0; i < _planet.Tiles[_selection].Neighbors.Count; i++)
             {
-                for (int j = 0; j < _planet.Tiles[_selection].Corners.Count; j++)
-                {
-                    Gizmos.color = Color.Lerp(Color.blue, Color.white, (float)j / (float)_planet.Tiles[_selection].Corners.Count);
-                    Gizmos.DrawWireSphere(transform.TransformPoint(_planet.Tiles[_selection].Corners[j]), 0.025f);
-                    Handles.Label(transform.TransformPoint(_planet.Tiles[_selection].Corners[j]), j.ToString());
-                }
+                //for (int j = 0; j < _planet.Tiles[_selection].Corners.Count; j++)
+                //{
+                //    Gizmos.color = Color.Lerp(Color.blue, Color.white, (float)j / (float)_planet.Tiles[_selection].Corners.Count);
+                //    Gizmos.DrawWireSphere(transform.TransformPoint(_planet.Tiles[_selection].Corners[j]), 0.025f);
+                //    Handles.Label(transform.TransformPoint(_planet.Tiles[_selection].Corners[j]), j.ToString());
+                //}
                 Handles.Label(transform.TransformPoint(_planet.Tiles[_selection].Extents[i]), i.ToString());
                 Handles.Label(transform.TransformPoint(_planet.Tiles[_selection].Neighbors[i].Position), i.ToString());
             }
+
+
+            //Draw Bridge
+            Gizmos.color = Color.red;
+            int t = 2;
+            //int n = 1;
+
+            //for(int t = 0; t < Planet.Tiles.Count; t++)
+            //{
+            for(int n = 0; n < Planet.Tiles[t].Neighbors.Count; n++)
+            {
+                int neigh = n - 1;
+                if(n == 0)
+                {
+                    neigh = Planet.Tiles[t].Neighbors.Count - 1;
+                }
+
+                Vector3 a = Planet.Tile_Verts[Planet.Tile_Triangles[Planet.Tiles[t].TriangleIndexes[neigh] * 3 + 1]];
+                Vector3 b = Planet.Tile_Verts[Planet.Tile_Triangles[Planet.Tiles[t].TriangleIndexes[neigh] * 3 + 2]];
+
+                int neighborid = Planet.Tiles[t].Neighbors[n].Is_Neighbor(Planet.Tiles[t]) - 1;
+
+                if (neighborid == -1)
+                {
+                    neighborid = Planet.Tiles[t].Neighbors[n].Neighbors.Count - 1;
+                }
+
+                Vector3 A = Planet.Tile_Verts[Planet.Tile_Triangles[Planet.Tiles[t].Neighbors[n].TriangleIndexes[neighborid] * 3 + 1]];
+                Vector3 B = Planet.Tile_Verts[Planet.Tile_Triangles[Planet.Tiles[t].Neighbors[n].TriangleIndexes[neighborid] * 3 + 2]];
+
+                Gizmos.DrawLine(a, b);
+                //Gizmos.DrawLine(b, A);
+                //Gizmos.DrawLine(A, a);
+                Gizmos.DrawLine(A, B);
+                Debug.Log(n + " " + neighborid);
+            }
+            //}
+            
+            //Gizmos.DrawLine(A, B);
+
+            //Vector3 a = Planet.Tile_Verts[Planet.Tile_Triangles[Planet.Tiles[_selection].TriangleIndexes[0] * 3]];
+            //Vector3 b = Planet.Tile_Verts[Planet.Tile_Triangles[Planet.Tiles[_selection].TriangleIndexes[0] * 3 + 1]];
+            //Vector3 c = Planet.Tile_Verts[Planet.Tile_Triangles[Planet.Tiles[_selection].TriangleIndexes[0] * 3 + 2]];
+            ////Gizmos.DrawLine(a, b);
+            //Gizmos.DrawLine(b, c);
+            //Gizmos.DrawLine(c, a);
+
+            //int neighborInd = Planet.Tiles[_selection].Neighbors[1].Is_Neighbor(Planet.Tiles[_selection]);
+            ////Vector3 A = ;
+            //Vector3 B = Planet.Tile_Verts[Planet.Tile_Triangles[Planet.Tiles[_selection].Neighbors[1].TriangleIndexes[neighborInd - 1] * 3 + 1]];
+            //Vector3 C = Planet.Tile_Verts[Planet.Tile_Triangles[Planet.Tiles[_selection].Neighbors[1].TriangleIndexes[neighborInd - 1] * 3 + 2]];
+            ////Gizmos.DrawLine(A, B);
+            //Gizmos.DrawLine(B, C);
+            ////Gizmos.DrawLine(C, A);
         }
     }
     #endregion
